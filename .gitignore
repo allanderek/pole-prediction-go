@@ -1,0 +1,31 @@
+# Generated files
+*_templ.go
+*_templ.txt
+
+# Generated sqlc files
+datastore
+
+# Development database.
+debug.predictions.db
+
+# Production database
+predictions.db
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+.DS_Store
+tmp
+testdata
+
+# dbmate automatically creates a schema dump file
+db/schema.sql
+
+
