@@ -29,3 +29,4 @@ testdata
 db/schema.sql
 
 
+.aider*
