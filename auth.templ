@@ -1,9 +1,9 @@
 package main
 
-templ InputField(id, name, type_, placeholder string, required bool) {
+templ InputField(id, label, name, type_, placeholder string, required bool) {
 	<div>
 		<label for={ id } class="block text-sm font-medium leading-6 text-gray-900">
-			{ name }
+			{ label }
 		</label>
 		<input
 			id={ id }
@@ -39,8 +39,8 @@ templ LoginPage(errorString string, isAuthenticated bool, fullname string) {
 					</div>
 				}
 				<form class="space-y-6" method="POST" action="/login">
-					@InputField("username", "Username", "text", "", true)
-					@InputField("password", "Password", "password", "", true)
+					@InputField("username", "Username", "username", "text", "", true)
+					@InputField("password", "Password", "password", "password", "", true)
 					<div>
 						<button
 							type="submit"
@@ -82,9 +82,9 @@ templ RegisterPage(errorString string, isAuthenticated bool, fullname string) {
 					</div>
 				}
 				<form class="space-y-6" method="POST" action="/register">
-					@InputField("fullname", "Full Name", "text", "Optional", false)
-					@InputField("username", "Username", "text", "", true)
-					@InputField("password", "Password", "password", "", true)
+					@InputField("fullname", "Full Name", "fullname", "text", "Optional", false)
+					@InputField("username", "Username", "username", "text", "", true)
+					@InputField("password", "Password", "password", "password", "", true)
 					<div>
 						<button
 							type="submit"
