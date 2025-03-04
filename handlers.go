@@ -45,10 +45,10 @@ type CookieAuthHandler struct {
 const maxCookieLifeTime = 2592000 // 300 days: 60 * 60 * 24 * 300
 
 // setAuthCookie sets a signed authentication cookie
-func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId int64, fullname string) {
+func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId int64, username, fullname string) {
 	// Create cookie value: userId|fullname|timestamp
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
-	cookieValue := fmt.Sprintf("%d|%s|%s", userId, fullname, timestamp)
+	cookieValue := fmt.Sprintf("%d|%s|%s|%s", userId, username, fullname, timestamp)
 
 	// Sign the cookie value
 	signature := h.signCookie(cookieValue)
@@ -76,6 +76,7 @@ func (h *CookieAuthHandler) signCookie(value string) string {
 type CookieInfo struct {
 	IsAuthenticated bool
 	UserID          string
+	Username        string
 	FullName        string
 	Timestamp       string
 }
@@ -88,17 +89,18 @@ func (h *CookieAuthHandler) verifyCookie(r *http.Request) CookieInfo {
 	}
 
 	parts := strings.Split(cookie.Value, "|")
-	if len(parts) != 4 {
+	if len(parts) != 5 {
 		return CookieInfo{IsAuthenticated: false}
 	}
 
 	userId := parts[0]
-	fullname := parts[1]
-	timestamp := parts[2]
-	signature := parts[3]
+	username := parts[1]
+	fullname := parts[2]
+	timestamp := parts[3]
+	signature := parts[4]
 
 	// Verify the signature
-	cookieValue := fmt.Sprintf("%s|%s|%s", userId, fullname, timestamp)
+	cookieValue := fmt.Sprintf("%s|%s|%s|%s", userId, username, fullname, timestamp)
 	expectedSignature := h.signCookie(cookieValue)
 
 	if signature != expectedSignature {
@@ -115,6 +117,7 @@ func (h *CookieAuthHandler) verifyCookie(r *http.Request) CookieInfo {
 	return CookieInfo{
 		IsAuthenticated: true,
 		UserID:          userId,
+		Username:        username,
 		FullName:        fullname,
 		Timestamp:       timestamp,
 	}
@@ -188,7 +191,7 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 
 		if error == "" {
 			// Login successful, set auth cookie
-			h.setAuthCookie(w, user.ID, user.Fullname)
+			h.setAuthCookie(w, user.ID, username, user.Fullname)
 
 			// Redirect to home page
 			http.Redirect(w, r, "/", http.StatusSeeOther)
