@@ -73,21 +73,21 @@ func (h *CookieAuthHandler) signCookie(value string) string {
 }
 
 type CookieInfo struct {
-    UserID    string
-    FullName  string
-    Timestamp string
+	UserID    string
+	FullName  string
+	Timestamp string
 }
 
 // verifyCookie verifies a signed cookie and returns a CookieInfo struct if valid
 func (h *CookieAuthHandler) verifyCookie(r *http.Request) (CookieInfo, bool) {
 	cookie, err := r.Cookie("auth")
 	if err != nil {
-		return "", "", false
+		return CookieInfo{}, false
 	}
 
 	parts := strings.Split(cookie.Value, "|")
 	if len(parts) != 4 {
-		return "", "", false
+		return CookieInfo{}, false
 	}
 
 	userId := parts[0]
@@ -100,7 +100,7 @@ func (h *CookieAuthHandler) verifyCookie(r *http.Request) (CookieInfo, bool) {
 	expectedSignature := h.signCookie(cookieValue)
 
 	if signature != expectedSignature {
-		return "", "", false
+		return CookieInfo{}, false
 	}
 
 	// Verify cookie isn't too old (optional)
@@ -135,8 +135,8 @@ func (h *CookieAuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Check if user is authenticated
-		userId, _, ok := h.verifyCookie(r)
-		if !ok || userId == "" {
+		cookieInfo, ok := h.verifyCookie(r)
+		if !ok || cookieInfo.UserID == "" {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
