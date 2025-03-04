@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/a-h/templ"
 	"github.com/allanderek/pole-prediction-go/auth"
+	"github.com/allanderek/pole-prediction-go/datastore"
 	"strings"
 	"time"
 )
@@ -218,6 +219,7 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 		password := r.FormValue("password")
 		fullname := r.FormValue("fullname")
 
+		ctx := context.Background()
 		var error string
 
 		// Validate inputs
@@ -227,7 +229,6 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 			error = "Password required"
 		} else {
 			// Check if username already exists
-			ctx := context.Background()
 			existing, err := app.Queries.UserExists(ctx, username)
 			if err == nil && existing > 0 {
 				error = "Username " + username + " registered already"
@@ -243,9 +244,13 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 			// Hash the password
 			hashedPassword := auth.HashPassword(password)
 
-			// Insert the new user
-			_, err := h.DB.Exec("INSERT INTO users (fullname, username, password) VALUES (?, ?, ?)",
-				fullname, username, hashedPassword)
+			toAdd := datastore.AddNewUserParams{
+				Fullname: fullname,
+				Username: username,
+				Password: hashedPassword,
+			}
+
+			err := app.Queries.AddNewUser(ctx, toAdd)
 
 			if err != nil {
 				error = "Database error, please try again"

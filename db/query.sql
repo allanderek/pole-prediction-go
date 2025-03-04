@@ -7,5 +7,13 @@ select id, fullname, password from users where username = ?
 ;
 
 -- name: UserExists :one
-SELECT EXISTS(SELECT 1 FROM users WHERE username = ?) 
+select exists(select 1 from users where username = ?) 
 ;
+
+-- name: AddNewUser :exec
+insert into users (
+    fullname, username, password
+    ) values
+    (@fullname, @username, @password)
+;
+
