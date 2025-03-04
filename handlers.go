@@ -44,7 +44,7 @@ func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId, fullnam
 		Value:    cookieValue + "|" + signature,
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   maxCookieLifeTime
+		MaxAge:   maxCookieLifeTime,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   false, // Set to true in production with HTTPS
 	})
