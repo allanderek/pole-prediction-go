@@ -1,6 +1,6 @@
 package main
 
-templ Page(title, description string, uri templ.SafeURL) {
+templ Page(title, description string, uri templ.SafeURL, isAuthenticated bool, fullName string) {
 	<!DOCTYPE html>
 	<html lang="en" class="h-full bg-white">
 		<head>
@@ -34,12 +34,12 @@ templ Page(title, description string, uri templ.SafeURL) {
 			</style>
 		</head>
 		<body class="h-full">
-			@Header()
+			@Header(isAuthenticated, fullName)
 			{ children... }
 		</body>
 	</html>
 }
-templ Header() {
+templ Header(isAuthenticated bool, fullName string) {
 	<header class="bg-white">
 		<nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
 			<div class="flex flex-1">
@@ -62,7 +62,11 @@ templ Header() {
 				<img class="h-12 w-auto" src="/static/logo/pole-prediction-logo.svg" alt="Pole Prediction logo"/>
 			</a>
 			<div class="flex flex-1 justify-end">
-				<a href="/login" class="text-sm/6 font-semibold text-gray-900">Login <span aria-hidden="true">&rarr;</span></a>
+				if isAuthenticated {
+					<a href="/profile" class="text-sm/6 font-semibold text-gray-900">{ fullName } <span aria-hidden="true">&rarr;</span></a>
+				} else {
+					<a href="/login" class="text-sm/6 font-semibold text-gray-900">Login <span aria-hidden="true">&rarr;</span></a>
+				}
 			</div>
 		</nav>
 		<!-- Mobile menu, show/hide based on menu open state. -->

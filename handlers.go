@@ -15,7 +15,8 @@ import (
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	templ.Handler(HomePage()).ServeHTTP(w, r)
+	userId, fullname, isAuthenticated := authHandler.verifyCookie(r)
+	templ.Handler(HomePage(isAuthenticated, fullname)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile
@@ -27,7 +28,7 @@ func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Render the profile template
-	templ.Handler(ProfilePage(userId, fullname)).ServeHTTP(w, r)
+	templ.Handler(ProfilePage(userId, fullname, true, fullname)).ServeHTTP(w, r)
 }
 
 // Secret key for signing cookies - change this to a secure random value
