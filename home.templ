@@ -4,11 +4,13 @@ templ Footer() {
 	<footer class="bg-slate-900"></footer>
 }
 
-templ HomePage() {
+templ HomePage(isAuthenticated bool, fullname string) {
 	@Page(
 		"Pole prediction",
 		"Predicting grand prix since, sometime this century",
 		"/",
+		isAuthenticated,
+		fullname,
 	) {
 		<div class="bg-white">
 			@Footer()

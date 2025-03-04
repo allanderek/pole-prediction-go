@@ -14,21 +14,21 @@ import (
 	"time"
 )
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	userId, fullname, isAuthenticated := authHandler.verifyCookie(r)
+func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
+	_, fullname, isAuthenticated := h.verifyCookie(r)
 	templ.Handler(HomePage(isAuthenticated, fullname)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile
 func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	userId, fullname, ok := h.verifyCookie(r)
-	if !ok || userId == "" {
+	userId, fullname, isAuthenticated := h.verifyCookie(r)
+	if !isAuthenticated || userId == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	// Render the profile template
-	templ.Handler(ProfilePage(userId, fullname, true, fullname)).ServeHTTP(w, r)
+	templ.Handler(ProfilePage(userId, fullname)).ServeHTTP(w, r)
 }
 
 // Secret key for signing cookies - change this to a secure random value
@@ -141,10 +141,11 @@ func (h *CookieAuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 // LoginHandler handles user login with cookies
 func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	_, fullname, isAuthenticated := h.verifyCookie(r)
 	// Display login form for GET requests
 	if r.Method == http.MethodGet {
 		// Render the login template
-		templ.Handler(LoginPage("")).ServeHTTP(w, r)
+		templ.Handler(LoginPage("", isAuthenticated, fullname)).ServeHTTP(w, r)
 		return
 	}
 
@@ -187,7 +188,7 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		// Login failed, display error
-		templ.Handler(LoginPage(error)).ServeHTTP(w, r)
+		templ.Handler(LoginPage(error, isAuthenticated, fullname)).ServeHTTP(w, r)
 		return
 	}
 
@@ -198,8 +199,9 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 // RegisterHandler handles user registration
 func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Display registration form for GET requests
+	_, fullname, isAuthenticated := h.verifyCookie(r)
 	if r.Method == http.MethodGet {
-		templ.Handler(RegisterPage("")).ServeHTTP(w, r)
+		templ.Handler(RegisterPage("", isAuthenticated, fullname)).ServeHTTP(w, r)
 		return
 	}
 
@@ -248,7 +250,7 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 		// Registration failed, display error
-		templ.Handler(RegisterPage(error)).ServeHTTP(w, r)
+		templ.Handler(RegisterPage(error, isAuthenticated, fullname)).ServeHTTP(w, r)
 		return
 	}
 

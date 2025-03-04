@@ -16,7 +16,7 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 	fs := http.FileServer(http.Dir("static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fs))
 
-	r.Get("/", homeHandler)
+	r.Get("/", authHandler.homeHandler)
 
 	// Auth routes
 	r.Get("/login", authHandler.LoginHandler)

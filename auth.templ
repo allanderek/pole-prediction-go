@@ -1,10 +1,12 @@
 package main
 
-templ LoginPage(errorString string) {
+templ LoginPage(errorString string, isAuthenticated bool, fullname string) {
 	@Page(
 		"Pole prediction",
 		"Predicting grand prix since, sometime this century",
 		"/login",
+		isAuthenticated,
+		fullname,
 	) {
 		<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
 			<div class="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -69,11 +71,13 @@ templ LoginPage(errorString string) {
 	}
 }
 
-templ RegisterPage(errorString string) {
+templ RegisterPage(errorString string, isAuthenticated bool, fullname string) {
 	@Page(
 		"Pole prediction",
 		"Predicting grand prix since, sometime this century",
 		"/register",
+		isAuthenticated,
+		fullname,
 	) {
 		<div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
 			<div class="sm:mx-auto sm:w-full sm:max-w-sm">
