@@ -60,8 +60,6 @@ func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId, fullnam
 		SameSite: http.SameSiteLaxMode,
 		Secure:   false, // Set to true in production with HTTPS
 	})
-
-	r.Get("/profile", authHandler.ProfileHandler)
 }
 
 // signCookie creates a HMAC signature for the cookie value
