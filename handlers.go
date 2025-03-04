@@ -16,20 +16,20 @@ import (
 )
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
-	_, fullname, isAuthenticated := h.verifyCookie(r)
-	templ.Handler(HomePage(isAuthenticated, fullname)).ServeHTTP(w, r)
+	cookieInfo, isAuthenticated := h.verifyCookie(r)
+	templ.Handler(HomePage(isAuthenticated, cookieInfo.FullName)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile
 func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	userId, fullname, isAuthenticated := h.verifyCookie(r)
-	if !isAuthenticated || userId == "" {
+	cookieInfo, isAuthenticated := h.verifyCookie(r)
+	if !isAuthenticated || cookieInfo.UserID == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	// Render the profile template
-	templ.Handler(ProfilePage(userId, fullname)).ServeHTTP(w, r)
+	templ.Handler(ProfilePage(cookieInfo.UserID, cookieInfo.FullName)).ServeHTTP(w, r)
 }
 
 // Secret key for signing cookies - change this to a secure random value
@@ -72,8 +72,14 @@ func (h *CookieAuthHandler) signCookie(value string) string {
 	return base64.URLEncoding.EncodeToString(signature)
 }
 
-// verifyCookie verifies a signed cookie and returns the userId and fullname if valid
-func (h *CookieAuthHandler) verifyCookie(r *http.Request) (string, string, bool) {
+type CookieInfo struct {
+    UserID    string
+    FullName  string
+    Timestamp string
+}
+
+// verifyCookie verifies a signed cookie and returns a CookieInfo struct if valid
+func (h *CookieAuthHandler) verifyCookie(r *http.Request) (CookieInfo, bool) {
 	cookie, err := r.Cookie("auth")
 	if err != nil {
 		return "", "", false
@@ -101,10 +107,10 @@ func (h *CookieAuthHandler) verifyCookie(r *http.Request) (string, string, bool)
 	var ts int64
 	fmt.Sscanf(timestamp, "%d", &ts)
 	if time.Now().Unix()-ts > maxCookieLifeTime {
-		return "", "", false
+		return CookieInfo{}, false
 	}
 
-	return userId, fullname, true
+	return CookieInfo{userId, fullname, timestamp}, true
 }
 
 // clearAuthCookie clears the authentication cookie
@@ -143,11 +149,11 @@ func (h *CookieAuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 // LoginHandler handles user login with cookies
 func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	_, fullname, isAuthenticated := h.verifyCookie(r)
+	cookieInfo, isAuthenticated := h.verifyCookie(r)
 	// Display login form for GET requests
 	if r.Method == http.MethodGet {
 		// Render the login template
-		templ.Handler(LoginPage("", isAuthenticated, fullname)).ServeHTTP(w, r)
+		templ.Handler(LoginPage("", isAuthenticated, cookieInfo.FullName)).ServeHTTP(w, r)
 		return
 	}
 
@@ -183,7 +189,7 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		// Login failed, display error
-		templ.Handler(LoginPage(error, isAuthenticated, fullname)).ServeHTTP(w, r)
+		templ.Handler(LoginPage(error, isAuthenticated, cookieInfo.FullName)).ServeHTTP(w, r)
 		return
 	}
 
@@ -194,9 +200,9 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 // RegisterHandler handles user registration
 func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Display registration form for GET requests
-	_, fullname, isAuthenticated := h.verifyCookie(r)
+	cookieInfo, isAuthenticated := h.verifyCookie(r)
 	if r.Method == http.MethodGet {
-		templ.Handler(RegisterPage("", isAuthenticated, fullname)).ServeHTTP(w, r)
+		templ.Handler(RegisterPage("", isAuthenticated, cookieInfo.FullName)).ServeHTTP(w, r)
 		return
 	}
 
@@ -245,7 +251,7 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 		// Registration failed, display error
-		templ.Handler(RegisterPage(error, isAuthenticated, fullname)).ServeHTTP(w, r)
+		templ.Handler(RegisterPage(error, isAuthenticated, cookieInfo.FullName)).ServeHTTP(w, r)
 		return
 	}
 
