@@ -1,5 +1,18 @@
 package main
 
+templ InputField(id, name, type, placeholder string, required bool) {
+    <input
+        id="{ id }"
+        name="{ name }"
+        type="{ type }"
+        placeholder="{ placeholder }"
+        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+        if required {
+            required
+        }
+    />
+}
+
 templ LoginPage(errorString string, isAuthenticated bool, fullname string) {
 	@Page(
 		"Pole prediction",
@@ -26,13 +39,7 @@ templ LoginPage(errorString string, isAuthenticated bool, fullname string) {
 							Username
 						</label>
 						<div class="mt-2">
-							<input
-								id="username"
-								name="username"
-								type="text"
-								required
-								class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-							/>
+							@InputField("username", "username", "text", "", true)
 						</div>
 					</div>
 					<div>
@@ -42,13 +49,7 @@ templ LoginPage(errorString string, isAuthenticated bool, fullname string) {
 							</label>
 						</div>
 						<div class="mt-2">
-							<input
-								id="password"
-								name="password"
-								type="password"
-								required
-								class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-							/>
+							@InputField("password", "password", "password", "", true)
 						</div>
 					</div>
 					<div>
@@ -97,13 +98,7 @@ templ RegisterPage(errorString string, isAuthenticated bool, fullname string) {
 							Full Name
 						</label>
 						<div class="mt-2">
-							<input
-								id="fullname"
-								name="fullname"
-								type="text"
-								placeholder="Optional"
-								class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-							/>
+							@InputField("fullname", "fullname", "text", "Optional", false)
 						</div>
 					</div>
 					<div>
@@ -111,13 +106,7 @@ templ RegisterPage(errorString string, isAuthenticated bool, fullname string) {
 							Username
 						</label>
 						<div class="mt-2">
-							<input
-								id="username"
-								name="username"
-								type="text"
-								required
-								class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-							/>
+							@InputField("username", "username", "text", "", true)
 						</div>
 					</div>
 					<div>
@@ -127,13 +116,7 @@ templ RegisterPage(errorString string, isAuthenticated bool, fullname string) {
 							</label>
 						</div>
 						<div class="mt-2">
-							<input
-								id="password"
-								name="password"
-								type="password"
-								required
-								class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-							/>
+							@InputField("password", "password", "password", "", true)
 						</div>
 					</div>
 					<div>
