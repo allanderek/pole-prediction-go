@@ -215,9 +215,9 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 			error = "Password required"
 		} else {
 			// Check if username already exists
-			var existingId string
-			row := h.DB.QueryRow("SELECT id FROM users WHERE username = ?", username)
-			if row.Scan(&existingId) != sql.ErrNoRows {
+			ctx := context.Background()
+			existing, err := app.Queries.UserExists(ctx, username)
+			if err == nil && existing > 0 {
 				error = "Username " + username + " registered already"
 			}
 		}
