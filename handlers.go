@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 
 	"crypto/hmac"
@@ -43,10 +44,10 @@ type CookieAuthHandler struct {
 const maxCookieLifeTime = 2592000 // 300 days: 60 * 60 * 24 * 300
 
 // setAuthCookie sets a signed authentication cookie
-func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId, fullname string) {
+func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId int64, fullname string) {
 	// Create cookie value: userId|fullname|timestamp
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
-	cookieValue := fmt.Sprintf("%s|%s|%s", userId, fullname, timestamp)
+	cookieValue := fmt.Sprintf("%d|%s|%s", userId, fullname, timestamp)
 
 	// Sign the cookie value
 	signature := h.signCookie(cookieValue)
@@ -141,6 +142,7 @@ func (h *CookieAuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 // LoginHandler handles user login with cookies
 func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
 	_, fullname, isAuthenticated := h.verifyCookie(r)
 	// Display login form for GET requests
 	if r.Method == http.MethodGet {
@@ -154,16 +156,9 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
-		var (
-			id       string
-			fullname string
-			encoded  string
-			error    string
-		)
+		var error string
 
-		// Query the database for the user
-		row := h.DB.QueryRow("SELECT id, fullname, password FROM users WHERE username = ?", username)
-		err := row.Scan(&id, &fullname, &encoded)
+		user, err := app.Queries.GetUser(ctx, username)
 
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -173,14 +168,14 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 			}
 		} else {
 			// Verify the password using our auth package
-			if !auth.VerifyPassword(password, encoded) {
+			if !auth.VerifyPassword(password, user.Password) {
 				error = "Incorrect password"
 			}
 		}
 
 		if error == "" {
 			// Login successful, set auth cookie
-			h.setAuthCookie(w, id, fullname)
+			h.setAuthCookie(w, user.ID, fullname)
 
 			// Redirect to home page
 			http.Redirect(w, r, "/", http.StatusSeeOther)
