@@ -18,6 +18,18 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(HomePage()).ServeHTTP(w, r)
 }
 
+// ProfileHandler handles displaying the user's profile
+func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
+	userId, fullname, ok := h.verifyCookie(r)
+	if !ok || userId == "" {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Render the profile template
+	templ.Handler(ProfilePage(userId, fullname)).ServeHTTP(w, r)
+}
+
 // Secret key for signing cookies - change this to a secure random value
 // TOOD: This should be in the config
 const cookieSecret = "my-cookie-signing-secret"
@@ -48,6 +60,8 @@ func (h *CookieAuthHandler) setAuthCookie(w http.ResponseWriter, userId, fullnam
 		SameSite: http.SameSiteLaxMode,
 		Secure:   false, // Set to true in production with HTTPS
 	})
+
+	r.Get("/profile", authHandler.ProfileHandler)
 }
 
 // signCookie creates a HMAC signature for the cookie value

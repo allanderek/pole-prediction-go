@@ -24,6 +24,7 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 	r.Get("/register", authHandler.RegisterHandler)
 	r.Post("/register", authHandler.RegisterHandler)
 	r.Get("/logout", authHandler.LogoutHandler)
+	r.Get("/profile", authHandler.ProfileHandler)
 
 	return r
 }
