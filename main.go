@@ -77,8 +77,13 @@ func main() {
 
 	app.Queries = datastore.New(db)
 
+	// Create handler with dependencies
+	authHandler := &CookieAuthHandler{
+		DB: db,
+	}
+
 	log.StartupMsg("Listening and serving ...")
-	http.ListenAndServe(":3003", router())
+	http.ListenAndServe(":3003", router(authHandler))
 }
 
 func GetEnvironment() string {
