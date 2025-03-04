@@ -175,7 +175,7 @@ func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request)
 
 		if error == "" {
 			// Login successful, set auth cookie
-			h.setAuthCookie(w, user.ID, fullname)
+			h.setAuthCookie(w, user.ID, user.Fullname)
 
 			// Redirect to home page
 			http.Redirect(w, r, "/", http.StatusSeeOther)
