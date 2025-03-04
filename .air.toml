@@ -15,7 +15,7 @@ tmp_dir = "tmp"
   full_bin = "POLEPREDICTION_ENV=dev POLEPREDICTION_SESSION=dfv89sdfgij534tnreu98dfvknjdfnkldvfiu9dvfiuodvfknm ./tmp/main"
   include_dir = []
   include_ext = ["go", "templ"]
-  include_file = []
+  include_file = [ "db/query.sql" ]
   kill_delay = "0s"
   log = "build-errors.log"
   poll = false
