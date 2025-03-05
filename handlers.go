@@ -13,10 +13,10 @@ import (
 	"github.com/allanderek/pole-prediction-go/auth"
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"strings"
+	"time"
 )
 
 const currentSeason = "2025"
-	"time"
 )
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
