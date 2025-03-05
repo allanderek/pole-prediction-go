@@ -4,7 +4,7 @@ templ Footer() {
 	<footer class="bg-slate-900"></footer>
 }
 
-templ HomePage(cookieInfo CookieInfo) {
+templ HomePage(cookieInfo CookieInfo, events []datastore.Event) {
 	@Page(
 		"Pole prediction",
 		"Predicting grand prix since, sometime this century",
@@ -12,6 +12,26 @@ templ HomePage(cookieInfo CookieInfo) {
 		cookieInfo,
 	) {
 		<div class="bg-white">
+			<table>
+				<thead>
+					<tr>
+						<th>Event Name</th>
+						<th>Date</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for event in events {
+						<tr>
+							<td>
+								<a href={"/event/" + event.ID}>
+									{event.Name}
+								</a>
+							</td>
+							<td>{event.Date}</td>
+						</tr>
+					}
+				</tbody>
+			</table>
 			@Footer()
 		</div>
 	}

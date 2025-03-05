@@ -13,11 +13,25 @@ import (
 	"github.com/allanderek/pole-prediction-go/auth"
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"strings"
+)
+
+const currentSeason = "2025"
 	"time"
 )
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
 	cookieInfo := h.verifyCookie(r)
+
+	// Retrieve the list of Formula 1 events for the current season
+	events, err := app.Queries.GetFormulaOneEvents(ctx, currentSeason)
+	if err != nil {
+		http.Error(w, "Unable to retrieve events", http.StatusInternalServerError)
+		return
+	}
+
+	// Pass the events to the HomePage template
+	templ.Handler(HomePage(cookieInfo, events)).ServeHTTP(w, r)
 	templ.Handler(HomePage(cookieInfo)).ServeHTTP(w, r)
 }
 
