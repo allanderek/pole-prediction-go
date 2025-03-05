@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 templ Page(title, description string, uri templ.SafeURL, cookieInfo CookieInfo) {
 	<!DOCTYPE html>
 	<html lang="en" class="h-full bg-white">
@@ -34,20 +36,49 @@ templ Page(title, description string, uri templ.SafeURL, cookieInfo CookieInfo) 
 			</style>
 		</head>
 		<body class="h-full">
-			@Header(cookieInfo)
+			@Header(cookieInfo, uri)
 			{ children... }
 		</body>
 	</html>
 }
 
-templ Header(cookieInfo CookieInfo) {
+func checkForCurrentUri(href, currentURI templ.SafeURL, classes string) string {
+	if strings.HasPrefix(string(currentURI), string(href)) {
+		return classes + " bg-gray-50 text-indigo-600"
+	} else {
+		return classes + " text-gray-900 hover:bg-gray-50"
+	}
+}
+
+// Desktop navigation link with active state highlighting
+templ DesktopNavLink(href, currentURI templ.SafeURL) {
+	<a href={ href } class={ checkForCurrentUri(href, currentURI, "text-sm/6 font-semibold") }>
+		{ children... }
+	</a>
+}
+
+// Mobile navigation link with active state highlighting
+templ MobileNavLink(href, currentURI templ.SafeURL) {
+	<a href={ href } class={ checkForCurrentUri(href, currentURI, "-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold") }>
+		{ children... }
+	</a>
+}
+
+// Main Header component with current URI awareness
+templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 	<header class="bg-white">
 		<nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
 			<div class="flex flex-1">
 				<div class="hidden lg:flex lg:gap-x-12">
-					<a href="/f1/2025" class="text-sm/6 font-semibold text-gray-900">Formula 1</a>
-					<a href="/fe/2025" class="text-sm/6 font-semibold text-gray-900">Formula E</a>
-					<a href="/leaderboard" class="text-sm/6 font-semibold text-gray-900">Leaderboard</a>
+					@DesktopNavLink("/f1/2025", currentURI) {
+						Formula 1 
+					}
+					@DesktopNavLink("/fe/2025", currentURI) {
+						Formula E 
+					}
+					@DesktopNavLink("/leaderboard", currentURI) {
+						Leaderboard 
+					}
 				</div>
 				<div class="flex lg:hidden">
 					<button type="button" class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
@@ -64,9 +95,13 @@ templ Header(cookieInfo CookieInfo) {
 			</a>
 			<div class="flex flex-1 justify-end">
 				if cookieInfo.IsAuthenticated {
-					<a href="/profile" class="text-sm/6 font-semibold text-gray-900">{ cookieInfo.FullName } <span aria-hidden="true">&rarr;</span></a>
+					@DesktopNavLink("/profile", currentURI) {
+						{ cookieInfo.FullName } <span aria-hidden="true">&rarr;</span>
+					}
 				} else {
-					<a href="/login" class="text-sm/6 font-semibold text-gray-900">Login <span aria-hidden="true">&rarr;</span></a>
+					@DesktopNavLink("/login", currentURI) {
+						Login <span aria-hidden="true">&rarr;</span>
+					}
 				}
 			</div>
 		</nav>
@@ -89,13 +124,27 @@ templ Header(cookieInfo CookieInfo) {
 						<img class="h-8 w-auto" src="/static/logo/pole-prediction-icon.svg" alt="Pole Prediction"/>
 					</a>
 					<div class="flex flex-1 justify-end">
-						<a href="/login" class="text-sm/6 font-semibold text-gray-900">Login <span aria-hidden="true">&rarr;</span></a>
+						if cookieInfo.IsAuthenticated {
+							@MobileNavLink("/profile", currentURI) {
+								{ cookieInfo.FullName } <span aria-hidden="true">&rarr;</span>
+							}
+						} else {
+							@MobileNavLink("/login", currentURI) {
+								Login <span aria-hidden="true">&rarr;</span>
+							}
+						}
 					</div>
 				</div>
 				<div class="mt-6 space-y-2">
-					<a href="/f1/2025" class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Formula 1</a>
-					<a href="/fe/2025" class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Formula E</a>
-					<a href="/leaderboard" class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Leaderboard</a>
+					@MobileNavLink("/f1/2025", currentURI) {
+						Formula 1 
+					}
+					@MobileNavLink("/fe/2025", currentURI) {
+						Formula E 
+					}
+					@MobileNavLink("/leaderboard", currentURI) {
+						Leaderboard 
+					}
 				</div>
 			</div>
 		</div>
