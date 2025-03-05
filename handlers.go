@@ -14,8 +14,9 @@ import (
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"strings"
 	"time"
-const currentSeason = "2025"
 )
+
+const currentSeason = "2025"
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
@@ -30,7 +31,6 @@ func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) 
 
 	// Pass the events to the HomePage template
 	templ.Handler(HomePage(cookieInfo, events)).ServeHTTP(w, r)
-	templ.Handler(HomePage(cookieInfo)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile

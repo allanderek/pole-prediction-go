@@ -1,13 +1,18 @@
 package main
 
+import (
+	"fmt"
+	"github.com/allanderek/pole-prediction-go/datastore"
+)
+
 templ Footer() {
 	<footer class="bg-slate-900"></footer>
 }
 
-templ HomePage(cookieInfo CookieInfo, events []datastore.Event) {
+templ HomePage(cookieInfo CookieInfo, events []datastore.GetFormulaOneEventsRow) {
 	@Page(
 		"Pole prediction",
-		"Predicting grand prix since, sometime this century",
+		"Predicting grand prix since sometime this century",
 		"/",
 		cookieInfo,
 	) {
@@ -15,19 +20,26 @@ templ HomePage(cookieInfo CookieInfo, events []datastore.Event) {
 			<table>
 				<thead>
 					<tr>
+						<th>Round</th>
 						<th>Event Name</th>
-						<th>Date</th>
 					</tr>
 				</thead>
 				<tbody>
-					@for event in events {
+					for _, event := range events {
 						<tr>
+							<td>{ fmt.Sprintf("%d", event.Round) } </td>
 							<td>
-								<a href={"/event/" + event.ID}>
-									{event.Name}
+								<a href={ templ.URL(fmt.Sprintf("/event/%d", event.ID)) }>
+									if event.Name.Valid {
+										{ event.Name.String }
+									} else {
+										Unknown event name
+									}
+									if event.Issprint > 0 {
+										🏃
+									}
 								</a>
 							</td>
-							<td>{event.Date}</td>
 						</tr>
 					}
 				</tbody>

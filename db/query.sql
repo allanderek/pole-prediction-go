@@ -17,3 +17,18 @@ insert into users (
     (@fullname, @username, @password)
 ;
 
+-- name: GetFormulaOneEvents :many
+select 
+    id, round, name, season,
+    case
+    when exists (
+        select 1
+        from formula_one_sessions
+        where event = events.id and name = "sprint"
+    ) then 1
+    else 0 
+    end as isSprint,
+    ( select min(start_time) from formula_one_sessions where event = events.id) as start_time
+from formula_one_events as events
+where season = @season
+;
