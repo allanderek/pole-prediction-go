@@ -14,8 +14,6 @@ import (
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"strings"
 	"time"
-)
-
 const currentSeason = "2025"
 )
 
