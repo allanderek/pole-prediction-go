@@ -28,7 +28,8 @@ select
     ) then 1
     else 0 
     end as isSprint,
-    ( select min(start_time) from formula_one_sessions where event = events.id) as start_time
+    -- This cast helps sqlc generate the correct output type.
+    cast(( select min(start_time) from formula_one_sessions where event = events.id) as text) as start_time
 from formula_one_events as events
 where season = @season
 ;

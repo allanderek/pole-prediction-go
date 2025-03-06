@@ -22,6 +22,7 @@ templ HomePage(cookieInfo CookieInfo, events []datastore.GetFormulaOneEventsRow)
 					<tr>
 						<th>Round</th>
 						<th>Event Name</th>
+						<th>Start Time</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -40,6 +41,7 @@ templ HomePage(cookieInfo CookieInfo, events []datastore.GetFormulaOneEventsRow)
 									}
 								</a>
 							</td>
+							<td>{ event.StartTime } </td>
 						</tr>
 					}
 				</tbody>
