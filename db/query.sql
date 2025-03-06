@@ -17,19 +17,14 @@ insert into users (
     (@fullname, @username, @password)
 ;
 
+
 -- name: GetFormulaOneEvents :many
-select 
-    id, round, name, season,
-    case
-    when exists (
-        select 1
-        from formula_one_sessions
-        where event = events.id and name = "sprint"
-    ) then 1
-    else 0 
-    end as isSprint,
-    -- This cast helps sqlc generate the correct output type.
-    cast(( select min(start_time) from formula_one_sessions where event = events.id) as text) as start_time
-from formula_one_events as events
+select * from formula_one_events_view
 where season = @season
 ;
+
+-- name: GetFormulaOneEvent :one
+select * from formula_one_events_view
+where id = @event_id
+;
+

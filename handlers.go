@@ -12,6 +12,7 @@ import (
 	"github.com/a-h/templ"
 	"github.com/allanderek/pole-prediction-go/auth"
 	"github.com/allanderek/pole-prediction-go/datastore"
+	"github.com/allanderek/pole-prediction-go/log"
 	"strings"
 	"time"
 )
@@ -25,6 +26,7 @@ func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) 
 	// Retrieve the list of Formula 1 events for the current season
 	events, err := app.Queries.GetFormulaOneEvents(ctx, currentSeason)
 	if err != nil {
+		log.Error("Could not retrieve the events", err)
 		http.Error(w, "Unable to retrieve events", http.StatusInternalServerError)
 		return
 	}
