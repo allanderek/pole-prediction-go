@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"github.com/go-chi/chi/v5"
 
 	"crypto/hmac"
 	"crypto/sha256"
@@ -34,6 +34,24 @@ func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) 
 	// Pass the events to the HomePage template
 	templ.Handler(HomePage(cookieInfo, events)).ServeHTTP(w, r)
 }
+
+// EventHandler handles displaying a single Formula One event
+func (h *CookieAuthHandler) EventHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	cookieInfo := h.verifyCookie(r)
+
+	eventID := chi.URLParam(r, "event-id")
+
+	// Retrieve the Formula 1 event by ID
+	event, err := app.Queries.GetFormulaOneEvent(ctx, eventID)
+	if err != nil {
+		log.Error("Could not retrieve the event", err)
+		http.Error(w, "Unable to retrieve event", http.StatusInternalServerError)
+		return
+	}
+
+	// Pass the event to the EventPage template
+	templ.Handler(EventPage(cookieInfo, event)).ServeHTTP(w, r)
 
 // ProfileHandler handles displaying the user's profile
 func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
