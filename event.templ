@@ -1,0 +1,20 @@
+package main
+
+import (
+	"fmt"
+	"github.com/allanderek/pole-prediction-go/datastore"
+)
+
+templ FormulaOneEventPage(cookieInfo CookieInfo, event datastore.FormulaOneEventsView) {
+	@Page(
+		"Pole prediction",
+		"Predicting grand prix since sometime this century",
+		formulaOneEventUrl(event.ID),
+		cookieInfo,
+	) {
+		<h1>Event Details</h1>
+		<p>Event Round { fmt.Sprintf("%d", event.Round) } </p>
+		<p>Event Name: @ShowEventName(event)</p>
+		<p>Event Date: { event.StartTime }</p>
+	}
+}

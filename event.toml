@@ -1,6 +1,0 @@
-{{ define "EventPage" }}
-<h1>Event Details</h1>
-<p>Event ID: {{ .Event.ID }}</p>
-<p>Event Name: {{ .Event.Name }}</p>
-<p>Event Date: {{ .Event.Date }}</p>
-{{ end }}

@@ -26,7 +26,7 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 	r.Get("/logout", authHandler.LogoutHandler)
 	r.Get("/profile", authHandler.ProfileHandler)
 
-	r.Get("/formulaone/event/{event-id}", authHandler.EventHandler)
+	r.Get("/formulaone/event/{event-id}", authHandler.FormulaOneEventHandler)
 
 	return r
 }
