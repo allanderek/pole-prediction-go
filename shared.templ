@@ -1,6 +1,17 @@
 package main
 
-import "strings"
+import (
+	"database/sql"
+	"strings"
+)
+
+templ NullableString(ifNull string, nullable sql.NullString) {
+	if nullable.Valid {
+		{ nullable.String }
+	} else {
+		{ ifNull }
+	}
+}
 
 templ Page(title, description string, uri templ.SafeURL, cookieInfo CookieInfo) {
 	<!DOCTYPE html>

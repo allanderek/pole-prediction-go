@@ -10,11 +10,7 @@ templ Footer() {
 }
 
 templ ShowEventName(event datastore.FormulaOneEventsView) {
-	if event.Name.Valid {
-		{ event.Name.String }
-	} else {
-		Unknown event name
-	}
+	@NullableString("Unknown event name", event.Name)
 	if event.Issprint > 0 {
 		🏃
 	}

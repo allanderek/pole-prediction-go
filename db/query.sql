@@ -29,7 +29,7 @@ where id = @event_id
 ;
 
 -- name: GetFormulaOneSessionsByEvent :many
-SELECT 
+select 
     s.id, 
     s.name, 
     s.half_points, 
@@ -37,7 +37,28 @@ SELECT
     s.cancelled, 
     s.event, 
     s.fastest_lap
-FROM formula_one_sessions s
-WHERE s.event = @event_id
-ORDER BY s.start_time
+from formula_one_sessions s
+where s.event = @event_id
+order BY s.start_time
+;
+
+-- name: GetFormulaOneEntrantsBySession :many
+select 
+    e.id,
+    e.number,
+    e.driver,
+    e.team,
+    e.session,
+    coalesce(e.participating, 0) as participating,
+    e.rank,
+    d.name as driver_name,
+    t.fullname as team_fullname,
+    t.shortname as team_shortname,
+    coalesce(t.color, '#000000') as team_color,
+    coalesce(t.secondary_color, '#000000') as team_secondary_color
+from formula_one_entrants e
+join drivers d on e.driver = d.id
+join formula_one_teams t on e.team = t.id
+where e.session = @session_id
+order by e.rank desc, e.number
 ;

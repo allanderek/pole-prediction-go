@@ -37,6 +37,18 @@ func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) 
 	templ.Handler(HomePage(cookieInfo, events)).ServeHTTP(w, r)
 }
 
+// SessionWithEntrants combines a session with its entrants
+type FormulaOneSessionWithEntrants struct {
+	Session  datastore.FormulaOneSession
+	Entrants []datastore.GetFormulaOneEntrantsBySessionRow
+}
+
+// EventData contains all sessions and their entrants for an event
+type FormulaOneEventData struct {
+	Event    datastore.FormulaOneEventsView
+	Sessions []FormulaOneSessionWithEntrants
+}
+
 // EventHandler handles displaying a single Formula One event
 func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
@@ -64,8 +76,27 @@ func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
+	eventData := FormulaOneEventData{
+		Event:    event,
+		Sessions: make([]FormulaOneSessionWithEntrants, 0, len(sessions)),
+	}
+
+	for _, session := range sessions {
+		entrants, err := app.Queries.GetFormulaOneEntrantsBySession(ctx, session.ID)
+		if err != nil {
+			log.Error(fmt.Sprintf("error fetching entrants for session %d: %w", session.ID), err)
+		} else {
+			sessionWithEntrants := FormulaOneSessionWithEntrants{
+				Session:  session,
+				Entrants: entrants,
+			}
+
+			eventData.Sessions = append(eventData.Sessions, sessionWithEntrants)
+		}
+	}
+
 	// Pass the event to the EventPage template
-	templ.Handler(FormulaOneEventPage(cookieInfo, event, sessions)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneEventPage(cookieInfo, eventData)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile
