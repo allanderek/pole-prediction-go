@@ -28,3 +28,16 @@ select * from formula_one_events_view
 where id = @event_id
 ;
 
+-- name: GetFormulaOneSessionsByEvent :many
+SELECT 
+    s.id, 
+    s.name, 
+    s.half_points, 
+    s.start_time, 
+    s.cancelled, 
+    s.event, 
+    s.fastest_lap
+FROM formula_one_sessions s
+WHERE s.event = @event_id
+ORDER BY s.start_time
+;

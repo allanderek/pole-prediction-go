@@ -57,8 +57,15 @@ func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
+	sessions, err := app.Queries.GetFormulaOneSessionsByEvent(ctx, eventID)
+	if err != nil {
+		log.Error(fmt.Sprintf("Could not retrieve the sessions associated with the event: %s", event.Name), err)
+		http.Error(w, "Unable to retrieve sessions", http.StatusInternalServerError)
+		return
+	}
+
 	// Pass the event to the EventPage template
-	templ.Handler(FormulaOneEventPage(cookieInfo, event)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneEventPage(cookieInfo, event, sessions)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile

@@ -18,12 +18,13 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, event datastore.FormulaOneEvent
 		<p>Event Date: { event.StartTime }</p>
 		<h2>Sessions</h2>
 		<ul>
-		@for _, session := range sessions {
+		for _, session := range sessions {
 			<li>
 				<p>Session Name: { session.Name }</p>
-				<p>Session Start: { session.StartTime }</p>
-				<p>Session End: { session.EndTime }</p>
-				<a href={ fmt.Sprintf("/formulaone/session/%d", session.ID) }>View Session</a>
+				if session.StartTime.Valid {
+					<p>Session Start: { session.StartTime.String }</p>
+				}
+				<a href={ templ.URL(fmt.Sprintf("/formulaone/session/%d", session.ID)) }>View Session</a>
 			</li>
 		}
 		</ul>
