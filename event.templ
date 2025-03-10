@@ -57,6 +57,9 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 							}
 						</tbody>
 					</table>
+					<h3 class="text-2xl font-bold mb-6">Session: { sessionData.Session.Name }</h3>
+					{{ userPrediction := []int64{} }}
+					@FormulaOneSessionPrediction(sessionData, userPrediction)
 				</li>
 			}
 		</ul>

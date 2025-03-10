@@ -1,0 +1,267 @@
+package main
+
+import (
+	"encoding/json"
+	"github.com/allanderek/pole-prediction-go/datastore"
+)
+
+// SessionPredictionData holds all the data needed for the prediction component
+type SessionPredictionData struct {
+	Session        datastore.FormulaOneSession                   `json:"session"`
+	Entrants       []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
+	UserPrediction []int64                                       `json:"userPrediction,omitempty"`
+}
+
+// FormulaOneSessionPrediction renders a prediction component for a Formula One session
+templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, userPrediction []int64) {
+	// Prepare the data for JavaScript
+	<div id="prediction-component" class="w-full max-w-3xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-6" data-session={ generateSessionDataJSON(sessionData, userPrediction) }>
+		<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+			<h3 class="text-xl font-bold mb-2 sm:mb-0">Prediction for <span id="session-name"></span></h3>
+			<div id="deadline-container" class="text-left sm:text-right"></div>
+		</div>
+		<div id="mobile-instructions" class="hidden mb-4 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
+			<p class="text-sm">Touch and hold an item, then drag to reorder your prediction.</p>
+		</div>
+		<div id="entrants-list" class="space-y-2"></div>
+		<div class="mt-6 text-right">
+			<button id="save-prediction" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition text-base">
+				Save Prediction
+			</button>
+		</div>
+	</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+	<script>
+		// This function will be called when the DOM is loaded
+		document.addEventListener('DOMContentLoaded', function() {
+			// Check if we're on a mobile device and show instructions
+			if (isMobileDevice()) {
+				document.getElementById('mobile-instructions').classList.remove('hidden');
+			}
+			
+			// Get session data from the data attribute (populated by Go template)
+			const sessionDataElement = document.getElementById('prediction-component');
+			const sessionData = JSON.parse(sessionDataElement.getAttribute('data-session'));
+			const entrants = sessionData.entrants;
+			const sessionId = sessionData.session.id;
+			const sessionName = sessionData.session.name;
+			let startTime = null;
+			
+			// Parse start time if available
+			if (sessionData.session.start_time && sessionData.session.start_time.String) {
+				startTime = sessionData.session.start_time.String;
+			}
+
+			// Update session name
+			document.getElementById('session-name').textContent = sessionName;
+			
+			// Check if the session has started
+			const hasStarted = startTime ? new Date(startTime) < new Date() : false;
+			const deadlineContainer = document.getElementById('deadline-container');
+			
+			if (hasStarted) {
+				deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
+				document.getElementById('save-prediction').disabled = true;
+				document.getElementById('save-prediction').classList.add('bg-gray-400');
+				document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
+				sessionDataElement.classList.add('opacity-75');
+			} else if (startTime) {
+				const deadline = new Date(startTime);
+				const timeUntil = getTimeUntil(deadline);
+				deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${timeUntil}</div>`;
+				
+				// Update countdown every minute
+				setInterval(() => {
+					const updatedTimeUntil = getTimeUntil(deadline);
+					deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${updatedTimeUntil}</div>`;
+					
+					// Disable if time has passed
+					if (new Date() >= deadline) {
+						deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
+						document.getElementById('save-prediction').disabled = true;
+						document.getElementById('save-prediction').classList.add('bg-gray-400');
+						document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
+						sessionDataElement.classList.add('opacity-75');
+					}
+				}, 60000);
+			}
+			
+			// Render entrants list
+			const entrantsList = document.getElementById('entrants-list');
+			
+			// Sort entrants by previous prediction if available, otherwise by default order
+			const userPrediction = sessionData.userPrediction || [];
+			
+			// Create a copy of entrants we can modify
+			let sortedEntrants = [...entrants];
+			
+			// If user has a previous prediction, use that order
+			if (userPrediction.length > 0) {
+				// Create a map for quick lookup
+				const entrantMap = new Map(entrants.map(e => [e.id, e]));
+				
+				// Order according to previous prediction
+				sortedEntrants = userPrediction.map(id => entrantMap.get(id))
+					// Filter out any entrant IDs that no longer exist
+					.filter(e => e !== undefined);
+				
+				// Add any new entrants that weren't in the previous prediction
+				const predictedIds = new Set(userPrediction);
+				const newEntrants = entrants.filter(e => !predictedIds.has(e.id));
+				sortedEntrants = [...sortedEntrants, ...newEntrants];
+			}
+			
+			// Render entrants as draggable items
+			renderEntrants(sortedEntrants, entrantsList);
+			
+			// Set up sortable.js for drag and drop (touch-friendly)
+			setupSortable(entrantsList);
+			
+			// Handle save button
+			document.getElementById('save-prediction').addEventListener('click', function() {
+				if (hasStarted) {
+					alert('Cannot submit prediction after the session has started.');
+					return;
+				}
+				
+				// Get current order of entrants
+				const entrantItems = entrantsList.querySelectorAll('.entrant-item');
+				const orderedIds = Array.from(entrantItems).map(item => 
+					parseInt(item.getAttribute('data-entrant-id'))
+				);
+				
+				// Send to server
+				savePrediction(sessionId, orderedIds);
+			});
+		});
+		
+		function isMobileDevice() {
+			return (window.innerWidth <= 768) || 
+				   ('ontouchstart' in window) || 
+				   (navigator.maxTouchPoints > 0) || 
+				   (navigator.msMaxTouchPoints > 0);
+		}
+		
+		function renderEntrants(entrants, container) {
+			container.innerHTML = '';
+			
+			entrants.forEach((entrant, index) => {
+				const position = index + 1;
+				const item = document.createElement('div');
+				item.className = 'entrant-item flex items-center p-3 sm:p-4 bg-white border border-gray-200 rounded-md shadow-sm';
+				item.setAttribute('data-entrant-id', entrant.id);
+				
+				const teamColor = entrant.TeamColor || '#000000';
+				
+				item.innerHTML = `
+					<div class="font-bold mr-4 w-6 text-center">${position}</div>
+					<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 mr-4 font-semibold">${entrant.Number}</div>
+					<div class="flex-1">
+						<div class="font-semibold">${entrant.DriverName.String}</div>
+						<div style="color: ${teamColor};">${entrant.TeamShortname.String}</div>
+					</div>
+					<div class="flex items-center justify-center w-10 h-10 rounded-md text-gray-500 cursor-move touch-manipulation">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+						</svg>
+					</div>
+				`;
+				
+				container.appendChild(item);
+			});
+		}
+		
+		function setupSortable(container) {
+			new Sortable(container, {
+				animation: 150,
+				handle: '.cursor-move',
+				ghostClass: 'bg-gray-100',
+				chosenClass: 'bg-blue-50',
+				dragClass: 'shadow-lg',
+				onEnd: function() {
+					// Update position numbers after drag
+					updatePositions(container);
+				}
+			});
+		}
+		
+		function updatePositions(container) {
+			// Update position numbers after dragging
+			container.querySelectorAll('.entrant-item').forEach((item, index) => {
+				const position = item.querySelector('div:first-child');
+				position.textContent = index + 1;
+			});
+		}
+		
+		function getTimeUntil(deadline) {
+			const now = new Date();
+			const diff = deadline - now;
+			
+			if (diff <= 0) {
+				return 'Deadline passed';
+			}
+			
+			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+			const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+			const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+			
+			let result = '';
+			if (days > 0) {
+				result += `${days}d `;
+			}
+			if (hours > 0 || days > 0) {
+				result += `${hours}h `;
+			}
+			result += `${minutes}m`;
+			
+			return result;
+		}
+		
+		function savePrediction(sessionId, orderedIds) {
+			// Create fetch request to save the prediction
+			fetch('/formulaone/prediction/save', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					session_id: sessionId,
+					entrant_order: orderedIds
+				})
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Network response was not ok');
+				}
+				return response.json();
+			})
+			.then(data => {
+				if (data.success) {
+					alert('Prediction saved successfully!');
+				} else {
+					alert('Error: ' + (data.message || 'Failed to save prediction.'));
+				}
+			})
+			.catch(error => {
+				console.error('Error saving prediction:', error);
+				alert('Failed to save prediction. Please try again.');
+			});
+		}
+	</script>
+}
+
+// Helper function to generate the JSON data attribute
+func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPrediction []int64) string {
+	data := SessionPredictionData{
+		Session:        sessionData.Session,
+		Entrants:       sessionData.Entrants,
+		UserPrediction: userPrediction,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(jsonData)
+}
