@@ -21,7 +21,7 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			<div id="deadline-container" class="text-left sm:text-right"></div>
 		</div>
 		<div id="mobile-instructions" class="hidden mb-4 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
-			<p class="text-sm">Touch and hold an item, then drag to reorder your prediction.</p>
+			<p class="text-sm">Touch and hold an item, then drag to reorder your prediction. You can also use the up/down buttons to adjust positions.</p>
 		</div>
 		<div id="entrants-list" class="space-y-2"></div>
 		<div class="mt-6 text-right">
@@ -148,10 +148,38 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			entrants.forEach((entrant, index) => {
 				const position = index + 1;
 				const item = document.createElement('div');
+				const isTopTen = position <= 10;
+				
+				// Apply different styling for drivers outside top 10
 				item.className = 'entrant-item flex items-center p-3 sm:p-4 bg-white border border-gray-200 rounded-md shadow-sm';
+				
+				// Add top-ten class for styling differences
+				if (!isTopTen) {
+					item.classList.add('non-points-position');
+					item.style.opacity = '0.50';
+				}
+				
+				// Add divider before position 11
+				if (position === 11) {
+					const divider = document.createElement('div');
+					divider.className = 'border-t border-gray-300 my-3 relative';
+					divider.innerHTML = '<span class="absolute top-0 left-0 transform -translate-y-1/2 bg-white px-2 text-xs text-gray-500"></span>';
+					container.appendChild(divider);
+				}
+				
 				item.setAttribute('data-entrant-id', entrant.id);
+				item.setAttribute('data-position', position);
 				
 				const teamColor = entrant.TeamColor || '#000000';
+				
+				// Add up/down buttons for mobile
+				const moveUpButton = position === 1 ? 
+					'<button disabled class="move-up-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬆️</button>' : 
+					'<button class="move-up-btn text-blue-500 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100">⬆️</button>';
+				
+				const moveDownButton = position === entrants.length ? 
+					'<button disabled class="move-down-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬇️</button>' : 
+					'<button class="move-down-btn text-blue-500 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100">⬇️</button>';
 				
 				item.innerHTML = `
 					<div class="font-bold mr-4 w-6 text-center">${position}</div>
@@ -160,14 +188,34 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 						<div class="font-semibold">${entrant.DriverName.String}</div>
 						<div style="color: ${teamColor};">${entrant.TeamShortname.String}</div>
 					</div>
-					<div class="flex items-center justify-center w-10 h-10 rounded-md text-gray-500 cursor-move touch-manipulation">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-						</svg>
+					<div class="flex items-center">
+						${moveUpButton}
+						${moveDownButton}
+						<div class="flex items-center justify-center w-10 h-10 rounded-md text-gray-500 cursor-move touch-manipulation">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+							</svg>
+						</div>
 					</div>
 				`;
 				
 				container.appendChild(item);
+				
+				// Add event listeners for up/down buttons
+				const upButton = item.querySelector('.move-up-btn');
+				const downButton = item.querySelector('.move-down-btn');
+				
+				if (upButton) {
+					upButton.addEventListener('click', function() {
+						moveEntrantUp(item, container);
+					});
+				}
+				
+				if (downButton) {
+					downButton.addEventListener('click', function() {
+						moveEntrantDown(item, container);
+					});
+				}
 			});
 		}
 		
@@ -179,17 +227,89 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 				chosenClass: 'bg-blue-50',
 				dragClass: 'shadow-lg',
 				onEnd: function() {
-					// Update position numbers after drag
-					updatePositions(container);
+					// Update position numbers and styles after drag
+					updatePositionsAndStyles(container);
 				}
 			});
 		}
 		
-		function updatePositions(container) {
-			// Update position numbers after dragging
-			container.querySelectorAll('.entrant-item').forEach((item, index) => {
-				const position = item.querySelector('div:first-child');
-				position.textContent = index + 1;
+		function moveEntrantUp(item, container) {
+			const prevItem = item.previousElementSibling;
+			if (prevItem && !prevItem.classList.contains('border-t')) {
+				container.insertBefore(item, prevItem);
+				updatePositionsAndStyles(container);
+			}
+		}
+		
+		function moveEntrantDown(item, container) {
+			const nextItem = item.nextElementSibling;
+			if (nextItem && !nextItem.classList.contains('border-t')) {
+				container.insertBefore(nextItem, item);
+				updatePositionsAndStyles(container);
+			}
+		}
+		
+		function updatePositionsAndStyles(container) {
+			// Get all entrant items
+			const items = container.querySelectorAll('.entrant-item');
+			let pointsLinePresent = false;
+			
+			// Check if the points line divider exists and remove it
+			const existingDivider = container.querySelector('.border-t.border-gray-300.my-3.relative');
+			if (existingDivider) {
+				container.removeChild(existingDivider);
+			}
+			
+			// Update positions and styles
+			items.forEach((item, index) => {
+				const position = index + 1;
+				const positionElement = item.querySelector('div:first-child');
+				
+				// Update position number
+				positionElement.textContent = position;
+				item.setAttribute('data-position', position);
+				
+				// Update top-ten styling
+				if (position <= 10) {
+					item.classList.remove('non-points-position');
+					item.style.opacity = '1';
+				} else {
+					item.classList.add('non-points-position');
+					item.style.opacity = '0.75';
+					
+					// Add points divider before position 11
+					if (position === 11 && !pointsLinePresent) {
+						const divider = document.createElement('div');
+						divider.className = 'border-t border-gray-300 my-3 relative';
+						divider.innerHTML = '<span class="absolute top-0 left-0 transform -translate-y-1/2 bg-white px-2 text-xs text-gray-500">Points line</span>';
+						container.insertBefore(divider, item);
+						pointsLinePresent = true;
+					}
+				}
+				
+				// Update up/down buttons states
+				const upButton = item.querySelector('.move-up-btn');
+				const downButton = item.querySelector('.move-down-btn');
+				
+				if (position === 1) {
+					upButton.disabled = true;
+					upButton.classList.add('text-gray-300');
+					upButton.classList.remove('text-blue-500', 'hover:bg-gray-100');
+				} else {
+					upButton.disabled = false;
+					upButton.classList.remove('text-gray-300');
+					upButton.classList.add('text-blue-500', 'hover:bg-gray-100');
+				}
+				
+				if (position === items.length) {
+					downButton.disabled = true;
+					downButton.classList.add('text-gray-300');
+					downButton.classList.remove('text-blue-500', 'hover:bg-gray-100');
+				} else {
+					downButton.disabled = false;
+					downButton.classList.remove('text-gray-300');
+					downButton.classList.add('text-blue-500', 'hover:bg-gray-100');
+				}
 			});
 		}
 		
