@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -22,7 +21,7 @@ import (
 const currentSeason = "2025"
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	cookieInfo := h.verifyCookie(r)
 
 	// Retrieve the list of Formula 1 events for the current season
@@ -51,7 +50,7 @@ type FormulaOneEventData struct {
 
 // EventHandler handles displaying a single Formula One event
 func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	cookieInfo := h.verifyCookie(r)
 	eventIDStr := chi.URLParam(r, "event-id")
 
@@ -236,7 +235,7 @@ func (h *CookieAuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 // LoginHandler handles user login with cookies
 func (h *CookieAuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := r.Context()
 	cookieInfo := h.verifyCookie(r)
 	// Display login form for GET requests
 	if r.Method == http.MethodGet {
@@ -300,7 +299,7 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 		password := r.FormValue("password")
 		fullname := r.FormValue("fullname")
 
-		ctx := context.Background()
+		ctx := r.Context()
 		var error string
 
 		// Validate inputs

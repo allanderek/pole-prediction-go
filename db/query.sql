@@ -62,3 +62,46 @@ join formula_one_teams t on e.team = t.id
 where e.session = @session_id
 order by e.rank desc, e.number
 ;
+
+
+-- name: GetFormulaOneSessionByID :one
+select *
+from formula_one_sessions
+where id = @session_id
+;
+
+-- name: GetUserPredictionForSession :many
+select
+    p.position,
+    p.entrant
+from formula_one_prediction_lines p
+where p.user = @user_id
+and p.session = @session_id
+order by p.position;
+
+-- name: DeleteFormulaOnePredictionLines :exec
+delete from formula_one_prediction_lines
+where user = @user_id
+and session = @session_id;
+
+-- name: CreateFormulaOnePredictionLine :exec
+insert into formula_one_prediction_lines (
+    user,
+    session,
+    position,
+    entrant
+) values (
+    @user_id,
+    @session_id,
+    @position,
+    @entrant_id
+);
+
+-- name: GetUserPredictionEntrantIDsForSession :many
+select
+    p.entrant
+from formula_one_prediction_lines p
+where p.user = @user_id
+and p.session = @session_id
+order by p.position
+;

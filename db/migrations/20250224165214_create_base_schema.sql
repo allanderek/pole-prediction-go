@@ -145,10 +145,10 @@ CREATE TABLE formula_one_entrants (
     );
 CREATE TABLE formula_one_prediction_lines (
     -- The user can be null, which represents a result
-    user integer,
+    user integer not null,
     session integer not null,
     fastest_lap integer,
-    position integer check (position >= 1 and position <= 20),
+    position integer not null check (position >= 1 and position <= 20),
     entrant integer not null,
     foreign key (entrant) references formula_one_entrants (id),
     foreign key (session) references formula_one_sessions (id),

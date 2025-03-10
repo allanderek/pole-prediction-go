@@ -32,6 +32,7 @@ type App struct {
 	Config      config.Config
 	Queries     *datastore.Queries
 	TokenAuth   *jwtauth.JWTAuth
+	DB          *sql.DB
 }
 
 var app App
@@ -75,6 +76,7 @@ func main() {
 		log.StartupFailure("Error initialising DB", err)
 	}
 
+	app.DB = db
 	app.Queries = datastore.New(db)
 
 	// Create handler with dependencies

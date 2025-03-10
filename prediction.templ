@@ -5,13 +5,6 @@ import (
 	"github.com/allanderek/pole-prediction-go/datastore"
 )
 
-// SessionPredictionData holds all the data needed for the prediction component
-type SessionPredictionData struct {
-	Session        datastore.FormulaOneSession                   `json:"session"`
-	Entrants       []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
-	UserPrediction []int64                                       `json:"userPrediction,omitempty"`
-}
-
 // FormulaOneSessionPrediction renders a prediction component for a Formula One session
 templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, userPrediction []int64) {
 	// Prepare the data for JavaScript
@@ -43,8 +36,8 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			const sessionDataElement = document.getElementById('prediction-component');
 			const sessionData = JSON.parse(sessionDataElement.getAttribute('data-session'));
 			const entrants = sessionData.entrants;
-			const sessionId = sessionData.session.id;
-			const sessionName = sessionData.session.name;
+			const sessionId = sessionData.session.ID;
+			const sessionName = sessionData.session.Name;
 			let startTime = null;
 			
 			// Parse start time if available
@@ -167,7 +160,7 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 					container.appendChild(divider);
 				}
 				
-				item.setAttribute('data-entrant-id', entrant.id);
+				item.setAttribute('data-entrant-id', entrant.ID);
 				item.setAttribute('data-position', position);
 				
 				const teamColor = entrant.TeamColor || '#000000';
@@ -368,6 +361,13 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			});
 		}
 	</script>
+}
+
+// SessionPredictionData holds all the data needed for the prediction component
+type SessionPredictionData struct {
+	Session        datastore.FormulaOneSession                   `json:"session"`
+	Entrants       []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
+	UserPrediction []int64                                       `json:"userPrediction,omitempty"`
 }
 
 // Helper function to generate the JSON data attribute
