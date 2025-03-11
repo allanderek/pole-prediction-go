@@ -23,8 +23,8 @@ CREATE TABLE teams (
     id integer primary key autoincrement, 
     constructor text not null,
     season text not null,
-    fullname text, 
-    shortname text,
+    fullname text not null, 
+    shortname text not null,
     color text,
     foreign key (season) references seasons (year),
     foreign key (constructor) references formula_e_constructors 
@@ -99,15 +99,15 @@ CREATE TABLE results (
     );
 CREATE TABLE constructors (
     id integer primary key autoincrement,
-    name text
+    name text not null
 );
 CREATE TABLE formula_one_seasons (
     year text not null primary key
 );
 CREATE TABLE formula_one_teams ( 
     id integer primary key autoincrement, 
-    fullname text, 
-    shortname text,
+    fullname text not null, 
+    shortname text not null,
     constructor text not null,
     season text not null,
     color text, secondary_color text,
@@ -164,7 +164,7 @@ CREATE TABLE formula_one_season_prediction_lines (
     -- More importantly the 'season' of team must match that of the season, I'm not sure if we can specify such a constraint.
     user integer not null,
     season text not null,
-    position integer check (position >= 1 and position <= 10),
+    position integer not null check (position >= 1 and position <= 10),
     team integer not null,
     foreign key (user) references users (id),
     foreign key (season) references formula_one_seasons (year),

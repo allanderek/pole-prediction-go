@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/allanderek/pole-prediction-go/datastore"
+	"strconv"
 )
 
 // FormulaOneSessionPrediction renders a prediction component for a Formula One session
@@ -376,6 +377,334 @@ func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPred
 		Session:        sessionData.Session,
 		Entrants:       sessionData.Entrants,
 		UserPrediction: userPrediction,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(jsonData)
+}
+
+// FormulaOneSeasonPage displays the Formula One season page with constructor standings prediction
+templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, events []datastore.FormulaOneEventsView) {
+	@Page(
+		"Formula 1 "+season+" Season Predictions",
+		"Predict the constructor standings for the Formula 1 "+season+" season",
+		templ.URL("/f1/"+season),
+		cookieInfo,
+	) {
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Season Events Sidebar -->
+				<div class="col-span-1">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+						<h2 class="text-xl font-bold text-gray-900 mb-4">F1 { season } Events</h2>
+						if len(events) > 0 {
+							<ul class="space-y-2">
+								for _, event := range events {
+									<li>
+										<a href={ templ.URL("/formulaone/event/" + strconv.FormatInt(event.ID, 10)) } class="flex items-center p-2 hover:bg-gray-50 rounded-md transition">
+											<span class="text-gray-700 font-medium">Round { strconv.FormatInt(event.Round, 10) }</span>
+											<span class="ml-3 text-gray-900">{ event.Name.String }</span>
+										</a>
+									</li>
+								}
+							</ul>
+						} else {
+							<p class="text-gray-500 italic">No events available for this season yet.</p>
+						}
+					</div>
+				</div>
+				<!-- Main Content -->
+				<div class="col-span-1 lg:col-span-2">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+						<h1 class="text-3xl font-bold text-gray-900 mb-4">Formula 1 { season } Constructor Standings Prediction</h1>
+						<p class="text-gray-600 mb-6">Drag and drop the teams to predict the final constructor standings for the { season } season.</p>
+						<!-- Season Prediction Component -->
+						<div id="season-prediction-component" class="w-full" data-teams={ generateTeamsJSON(teams, userPrediction, season) }>
+							<div id="mobile-instructions" class="hidden mb-4 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
+								<p class="text-sm">Touch and hold a team, then drag to reorder your prediction. You can also use the up/down buttons to adjust positions.</p>
+							</div>
+							<div id="teams-list" class="space-y-2 mb-6"></div>
+							if cookieInfo.IsAuthenticated {
+								<div class="mt-6 text-right">
+									<button id="save-prediction" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition text-base">
+										Save Prediction
+									</button>
+								</div>
+							} else {
+								<div class="mt-6 p-4 bg-yellow-50 text-yellow-800 rounded-md border border-yellow-200">
+									<p>You need to <a href="/login" class="font-medium underline">login</a> to save your prediction.</p>
+								</div>
+							}
+						</div>
+						<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+						<script>
+							// This function will be called when the DOM is loaded
+							document.addEventListener('DOMContentLoaded', function() {
+								// Check if we're on a mobile device and show instructions
+								if (isMobileDevice()) {
+									document.getElementById('mobile-instructions').classList.remove('hidden');
+								}
+								
+								// Get teams data from the data attribute (populated by Go template)
+								const seasonComponent = document.getElementById('season-prediction-component');
+								const teamsData = JSON.parse(seasonComponent.getAttribute('data-teams'));
+								const teams = teamsData.teams;
+								const season = teamsData.season;
+								const userPrediction = teamsData.userPrediction || [];
+								
+								// Create a copy of teams we can modify
+								let sortedTeams = [...teams];
+								
+								// If user has a previous prediction, use that order
+								if (userPrediction.length > 0) {
+									// Create a map for quick lookup
+									const teamMap = new Map(teams.map(t => [t.id, t]));
+									
+									// Order according to previous prediction
+									sortedTeams = userPrediction.map(id => teamMap.get(id))
+										// Filter out any team IDs that no longer exist
+										.filter(t => t !== undefined);
+									
+									// Add any new teams that weren't in the previous prediction
+									const predictedIds = new Set(userPrediction);
+									const newTeams = teams.filter(t => !predictedIds.has(t.id));
+									sortedTeams = [...sortedTeams, ...newTeams];
+								}
+								
+								// Limit to top 10 teams
+								sortedTeams = sortedTeams.slice(0, 10);
+								
+								// Render teams as draggable items
+								const teamsList = document.getElementById('teams-list');
+								renderTeams(sortedTeams, teamsList);
+								
+								// Set up sortable.js for drag and drop (touch-friendly)
+								setupSortable(teamsList);
+								
+								// Handle save button
+								const saveButton = document.getElementById('save-prediction');
+								if (saveButton) {
+									saveButton.addEventListener('click', function() {
+										// Get current order of teams
+										const teamItems = teamsList.querySelectorAll('.team-item');
+										const orderedIds = Array.from(teamItems).map(item => 
+											parseInt(item.getAttribute('data-team-id'))
+										);
+										
+										// Send to server
+										saveSeasonPrediction(season, orderedIds);
+									});
+								}
+							});
+							
+							function isMobileDevice() {
+								return (window.innerWidth <= 768) || 
+									'ontouchstart' in window || 
+									navigator.maxTouchPoints > 0 || 
+									navigator.msMaxTouchPoints > 0;
+							}
+							
+							function renderTeams(teams, container) {
+								container.innerHTML = '';
+								
+								teams.forEach((team, index) => {
+									const position = index + 1;
+									const item = document.createElement('div');
+									
+									item.className = 'team-item flex items-center p-4 bg-white border border-gray-200 rounded-md shadow-sm';
+									item.setAttribute('data-team-id', team.ID);
+									item.setAttribute('data-position', position);
+									
+									const teamColor = team.Color || '#CCCCCC';
+									const teamSecondaryColor = team.SecondaryColor || '#000000';
+									
+									// Add up/down buttons for mobile
+									const moveUpButton = position === 1 ? 
+										'<button disabled class="move-up-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬆️</button>' : 
+										'<button class="move-up-btn text-blue-500 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100">⬆️</button>';
+									
+									const moveDownButton = position === teams.length ? 
+										'<button disabled class="move-down-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬇️</button>' : 
+										'<button class="move-down-btn text-blue-500 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100">⬇️</button>';
+									
+									item.innerHTML = `
+										<div class="font-bold mr-4 w-6 text-center">${position}</div>
+										<div class="flex items-center justify-center w-10 h-10 rounded-full mr-4" style="background: ${teamColor}; border: 2px solid ${teamSecondaryColor}"></div>
+										<div class="flex-1">
+											<div class="font-semibold">${team.Fullname}</div>
+											<div style="color: ${teamColor};">${team.Shortname}</div>
+										</div>
+										<div class="flex items-center">
+											${moveUpButton}
+											${moveDownButton}
+											<div class="flex items-center justify-center w-10 h-10 rounded-md text-gray-500 cursor-move touch-manipulation">
+												<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+												</svg>
+											</div>
+										</div>
+									`;
+									
+									container.appendChild(item);
+									
+									// Add event listeners for up/down buttons
+									const upButton = item.querySelector('.move-up-btn');
+									const downButton = item.querySelector('.move-down-btn');
+									
+									if (upButton) {
+										upButton.addEventListener('click', function() {
+											moveTeamUp(item, container);
+										});
+									}
+									
+									if (downButton) {
+										downButton.addEventListener('click', function() {
+											moveTeamDown(item, container);
+										});
+									}
+								});
+							}
+							
+							function setupSortable(container) {
+								new Sortable(container, {
+									animation: 150,
+									handle: '.cursor-move',
+									ghostClass: 'bg-gray-100',
+									chosenClass: 'bg-blue-50',
+									dragClass: 'shadow-lg',
+									onEnd: function() {
+										// Update position numbers and styles after drag
+										updatePositions(container);
+									}
+								});
+							}
+							
+							function moveTeamUp(item, container) {
+								const prevItem = item.previousElementSibling;
+								if (prevItem) {
+									container.insertBefore(item, prevItem);
+									updatePositions(container);
+								}
+							}
+							
+							function moveTeamDown(item, container) {
+								const nextItem = item.nextElementSibling;
+								if (nextItem) {
+									container.insertBefore(nextItem, item);
+									updatePositions(container);
+								}
+							}
+							
+							function updatePositions(container) {
+								// Get all team items
+								const items = container.querySelectorAll('.team-item');
+								
+								// Update positions and buttons
+								items.forEach((item, index) => {
+									const position = index + 1;
+									const positionElement = item.querySelector('div:first-child');
+									
+									// Update position number
+									positionElement.textContent = position;
+									item.setAttribute('data-position', position);
+									
+									// Update up/down buttons states
+									const upButton = item.querySelector('.move-up-btn');
+									const downButton = item.querySelector('.move-down-btn');
+									
+									if (position === 1) {
+										upButton.disabled = true;
+										upButton.classList.add('text-gray-300');
+										upButton.classList.remove('text-blue-500', 'hover:bg-gray-100');
+									} else {
+										upButton.disabled = false;
+										upButton.classList.remove('text-gray-300');
+										upButton.classList.add('text-blue-500', 'hover:bg-gray-100');
+									}
+									
+									if (position === items.length) {
+										downButton.disabled = true;
+										downButton.classList.add('text-gray-300');
+										downButton.classList.remove('text-blue-500', 'hover:bg-gray-100');
+									} else {
+										downButton.disabled = false;
+										downButton.classList.remove('text-gray-300');
+										downButton.classList.add('text-blue-500', 'hover:bg-gray-100');
+									}
+								});
+							}
+							
+							function saveSeasonPrediction(season, orderedIds) {
+								// Create fetch request to save the prediction
+								fetch('/formulaone/season-prediction/save', {
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+									},
+									body: JSON.stringify({
+										season: season,
+										team_order: orderedIds
+									})
+								})
+								.then(response => {
+									if (!response.ok) {
+										throw new Error('Network response was not ok');
+									}
+									return response.json();
+								})
+								.then(data => {
+									if (data.success) {
+										alert('Season prediction saved successfully!');
+									} else {
+										alert('Error: ' + (data.message || 'Failed to save prediction.'));
+									}
+								})
+								.catch(error => {
+									console.error('Error saving prediction:', error);
+									alert('Failed to save prediction. Please try again.');
+								});
+							}
+						</script>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// SeasonTeamsData holds all the data needed for the season prediction component
+type SeasonTeamsData struct {
+	Teams          []datastore.GetTeamsByFormulaOneSeasonRow `json:"teams"`
+	UserPrediction []int64                                   `json:"userPrediction,omitempty"`
+	Season         string                                    `json:"season"`
+}
+
+// Helper function to generate the JSON data attribute for teams
+func generateTeamsJSON(teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, season string) string {
+	// Extract team IDs from user prediction in order
+	userPredictionIDs := make([]int64, 0, len(userPrediction))
+
+	// Create a map to sort the predictions by position
+	positionMap := make(map[int64]int64) // position -> team_id
+	for _, pred := range userPrediction {
+		positionMap[pred.Position] = pred.Team
+	}
+
+	// Add predictions in position order
+	for i := int64(1); i <= int64(len(userPrediction)); i++ {
+		if teamID, ok := positionMap[i]; ok {
+			userPredictionIDs = append(userPredictionIDs, teamID)
+		}
+	}
+
+	data := SeasonTeamsData{
+		Teams:          teams,
+		UserPrediction: userPredictionIDs,
+		Season:         season,
 	}
 
 	jsonData, err := json.Marshal(data)

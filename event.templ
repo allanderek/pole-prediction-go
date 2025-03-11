@@ -14,8 +14,9 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 			<div class="bg-white shadow-md rounded-lg p-6">
 				<h1 class="text-3xl font-bold text-gray-900 mb-4">Event Details</h1>
 				<p class="text-lg">Round { fmt.Sprintf("%d", event.Round) } </p>
-				<p class="text-xl font-semibold text-gray-800">@ShowEventName(event)
-</p>
+				<p class="text-xl font-semibold text-gray-800">
+					@ShowEventName(event)
+				</p>
 				<p class="text-md text-gray-600 mb-6">Event Date: { event.StartTime }</p>
 				<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-4">Sessions</h2>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -85,7 +86,7 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 										</td>
 										<td class="py-2 px-4 text-sm">
 											<span style={ templ.SafeCSS(fmt.Sprintf("color: %s", entrant.TeamColor)) } class="font-medium">
-												@NullableString("Unknown team", entrant.TeamShortname)
+												{ entrant.TeamShortname }
 											</span>
 										</td>
 										<td class="py-2 px-4 text-sm">

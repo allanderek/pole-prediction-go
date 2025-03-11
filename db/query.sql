@@ -105,3 +105,50 @@ where p.user = @user_id
 and p.session = @session_id
 order by p.position
 ;
+
+-- name: CreateFormulaOneSeasonPredictionLine :exec
+insert into formula_one_season_prediction_lines (
+    user,
+    season,
+    position,
+    team
+) values (
+    @user_id,
+    @season,
+    @position,
+    @team_id
+);
+
+-- name: DeleteFormulaOneSeasonPredictionLines :exec
+delete from formula_one_season_prediction_lines
+where user = @user_id
+and season = @season;
+
+-- name: GetFormulaOneSeasonPrediction :many
+select
+    p.position,
+    p.team,
+    t.fullname as team_fullname,
+    t.shortname as team_shortname,
+    t.color as team_color,
+    t.secondary_color as team_secondary_color
+from formula_one_season_prediction_lines p
+join formula_one_teams t on p.team = t.id
+where p.user = @user_id
+and p.season = @season
+order by p.position
+;
+
+-- name: GetTeamsByFormulaOneSeason :many
+select
+    t.id,
+    t.fullname,
+    t.shortname,
+    coalesce(t.color, '#000000') as color,
+    coalesce(t.secondary_color, '#000000') as secondary_color,
+    c.name as constructor_name
+from formula_one_teams t
+join constructors c on t.constructor = c.id
+where t.season = @season
+order by t.fullname
+;
