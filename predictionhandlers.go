@@ -52,7 +52,7 @@ func (h *CookieAuthHandler) SaveFormulaOnePrediction(w http.ResponseWriter, r *h
 	}
 
 	// Validate the request has required fields
-	f req.SessionID == 0 || len(req.EntrantOrder) == 0 {
+	if req.SessionID == 0 || len(req.EntrantOrder) == 0 {
 		sendJSONResponse(w, PredictionResponse{
 			Success: false,
 			Message: "Missing required fields",
