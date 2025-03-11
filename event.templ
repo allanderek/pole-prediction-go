@@ -10,58 +10,102 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 		formulaOneEventUrl(event.ID),
 		cookieInfo,
 	) {
-		<h1>Event Details</h1>
-		<p>Event Round { fmt.Sprintf("%d", event.Round) } </p>
-		<p>Event Name: @ShowEventName(event)</p>
-		<p>Event Date: { event.StartTime }</p>
-		<h2>Sessions</h2>
-		<ul>
-			for _, sessionData := range eventData.Sessions {
-				<li>
-					{{ session := sessionData.Session }}
-					<p>Session Name: { session.Name }</p>
-					if session.StartTime.Valid {
-						<p>Session Start: { session.StartTime.String }</p>
-					}
-					<a href={ templ.URL(fmt.Sprintf("/formulaone/session/%d", session.ID)) }>View Session</a>
-					<h3>Entrants</h3>
-					<table class="entrants-table">
-						<thead>
-							<tr>
-								<th>Number</th>
-								<th>Driver</th>
-								<th>Team</th>
-								<th>Status</th>
-							</tr>
-						</thead>
-						<tbody>
-							for _, entrant := range sessionData.Entrants {
-								<tr>
-									<td>{ fmt.Sprintf("%d", entrant.Number) }</td>
-									<td>
-										@NullableString("Unknown driver", entrant.DriverName)
-									</td>
-									<td>
-										<span style={ templ.SafeCSS(fmt.Sprintf("color: %s", entrant.TeamColor)) }>
-											@NullableString("Unknown team", entrant.TeamShortname)
-										</span>
-									</td>
-									<td>
-										if entrant.Participating == 1 {
-											Participating
-										} else {
-											Not Participating
-										}
-									</td>
-								</tr>
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="bg-white shadow-md rounded-lg p-6">
+				<h1 class="text-3xl font-bold text-gray-900 mb-4">Event Details</h1>
+				<p class="text-lg">Round { fmt.Sprintf("%d", event.Round) } </p>
+				<p class="text-xl font-semibold text-gray-800">@ShowEventName(event)
+</p>
+				<p class="text-md text-gray-600 mb-6">Event Date: { event.StartTime }</p>
+				<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-4">Sessions</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					for _, sessionData := range eventData.Sessions {
+						{{ session := sessionData.Session }}
+						<div class="border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+							<div class="flex justify-between items-start mb-2">
+								<h3 class="text-xl font-semibold text-gray-800">{ session.Name }</h3>
+							</div>
+							if session.StartTime.Valid {
+								<p class="text-sm text-gray-600 mb-3">Start: { session.StartTime.String }</p>
 							}
-						</tbody>
-					</table>
-					<h3 class="text-2xl font-bold mb-6">Session: { sessionData.Session.Name }</h3>
-					{{ userPrediction := []int64{} }}
-					@FormulaOneSessionPrediction(sessionData, userPrediction)
-				</li>
-			}
-		</ul>
+							<div class="mt-4">
+								<a href={ templ.URL(fmt.Sprintf("/formulaone/session/%d", session.ID)) } class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
+									View Session
+								</a>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// FormulaOneSessionPage displays a single Formula One session with prediction component
+templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSessionWithEntrants, userPrediction []int64) {
+	{{ session := sessionData.Session }}
+	@Page(
+		fmt.Sprintf("%s - Pole Prediction", session.Name),
+		fmt.Sprintf("Make your prediction for %s", session.Name),
+		templ.URL(fmt.Sprintf("/formulaone/session/%d", session.ID)),
+		cookieInfo,
+	) {
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="mb-8">
+				<a href={ templ.URL(fmt.Sprintf("/formulaone/event/%d", session.Event)) } class="text-blue-600 hover:text-blue-800 inline-flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+						<path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+					</svg>
+					Back to Event
+				</a>
+			</div>
+			<div class="bg-white shadow-md rounded-lg p-6 mb-8">
+				<h1 class="text-3xl font-bold text-gray-900 mb-4">{ session.Name }</h1>
+				if session.StartTime.Valid {
+					<p class="text-lg text-gray-700 mb-2">Start Time: { session.StartTime.String }</p>
+				}
+				<div class="mt-6">
+					<h2 class="text-xl font-semibold text-gray-800 mb-4">Session Participants</h2>
+					<div class="overflow-x-auto">
+						<table class="min-w-full bg-white border border-gray-200">
+							<thead>
+								<tr class="bg-gray-50">
+									<th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Number</th>
+									<th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Driver</th>
+									<th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Team</th>
+									<th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-700">Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, entrant := range sessionData.Entrants {
+									<tr class="border-b hover:bg-gray-50">
+										<td class="py-2 px-4 text-sm">{ fmt.Sprintf("%d", entrant.Number) }</td>
+										<td class="py-2 px-4 text-sm font-medium">
+											@NullableString("Unknown driver", entrant.DriverName)
+										</td>
+										<td class="py-2 px-4 text-sm">
+											<span style={ templ.SafeCSS(fmt.Sprintf("color: %s", entrant.TeamColor)) } class="font-medium">
+												@NullableString("Unknown team", entrant.TeamShortname)
+											</span>
+										</td>
+										<td class="py-2 px-4 text-sm">
+											if entrant.Participating == 1 {
+												<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Participating</span>
+											} else {
+												<span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Not Participating</span>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+			<div class="bg-white shadow-md rounded-lg p-6">
+				<h2 class="text-2xl font-bold text-gray-900 mb-6">Your Prediction</h2>
+				@FormulaOneSessionPrediction(sessionData, userPrediction)
+			</div>
+		</div>
 	}
 }

@@ -98,6 +98,58 @@ func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *htt
 	templ.Handler(FormulaOneEventPage(cookieInfo, eventData)).ServeHTTP(w, r)
 }
 
+// FormulaOneSessionHandler handles displaying a single Formula One session with prediction component
+func (h *CookieAuthHandler) FormulaOneSessionHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cookieInfo := h.verifyCookie(r)
+	sessionIDStr := chi.URLParam(r, "session-id")
+
+	sessionID, err := strconv.ParseInt(sessionIDStr, 10, 64)
+	if err != nil {
+		log.Error("Invalid session ID format", err)
+		http.Error(w, "Session not found", http.StatusNotFound)
+		return
+	}
+
+	// Get session details
+	session, err := app.Queries.GetFormulaOneSessionByID(ctx, sessionID)
+	if err != nil {
+		log.Error("Could not retrieve the session", err)
+		http.Error(w, "Unable to retrieve session", http.StatusInternalServerError)
+		return
+	}
+
+	// Get session entrants
+	entrants, err := app.Queries.GetFormulaOneEntrantsBySession(ctx, sessionID)
+	if err != nil {
+		log.Error(fmt.Sprintf("Error fetching entrants for session %d", sessionID), err)
+		http.Error(w, "Unable to retrieve session entrants", http.StatusInternalServerError)
+		return
+	}
+
+	// Combine session and entrants
+	sessionData := FormulaOneSessionWithEntrants{
+		Session:  session,
+		Entrants: entrants,
+	}
+
+	// If user is authenticated, try to get their prediction
+	var userPrediction []int64
+	if cookieInfo.IsAuthenticated {
+		userID, err := strconv.ParseInt(cookieInfo.UserID, 10, 64)
+		if err == nil {
+			// Get user's prediction for this session
+			userPrediction, _ = app.Queries.GetUserPredictionEntrantIDsForSession(ctx, datastore.GetUserPredictionEntrantIDsForSessionParams{
+				UserID:    userID,
+				SessionID: sessionID,
+			})
+		}
+	}
+
+	// Pass the session data to the SessionPage template
+	templ.Handler(FormulaOneSessionPage(cookieInfo, sessionData, userPrediction)).ServeHTTP(w, r)
+}
+
 // ProfileHandler handles displaying the user's profile
 func (h *CookieAuthHandler) ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	cookieInfo := h.verifyCookie(r)

@@ -27,6 +27,7 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 	r.Get("/profile", authHandler.ProfileHandler)
 
 	r.Get("/formulaone/event/{event-id}", authHandler.FormulaOneEventHandler)
+	r.Get("/formulaone/session/{session-id}", authHandler.FormulaOneSessionHandler)
 	r.Post("/formulaone/prediction/save", authHandler.SaveFormulaOnePrediction)
 
 	return r
