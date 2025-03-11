@@ -11,6 +11,7 @@
     pkgs.sqlite
     pkgs.litecli
     pkgs.vscode-langservers-extracted
+    pkgs.nodejs_23
   ];
 
   # See full reference at https://devenv.sh/reference/options/
