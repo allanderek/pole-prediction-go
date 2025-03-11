@@ -92,7 +92,7 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 					}
 				</div>
 				<div class="flex lg:hidden">
-					<button type="button" class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
+					<button type="button" class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700" id="mobile-menu-button">
 						<span class="sr-only">Open main menu</span>
 						<svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
@@ -116,21 +116,21 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 				}
 			</div>
 		</nav>
-		<!-- Mobile menu, show/hide based on menu open state. -->
-		<div class="lg:hidden" role="dialog" aria-modal="true">
-			<!-- Background backdrop, show/hide based on slide-over state. -->
-			<div class="fixed inset-0 z-10"></div>
-			<div class="fixed inset-y-0 left-0 z-10 w-full overflow-y-auto bg-white px-6 py-6">
+		<!-- Mobile menu, initially hidden -->
+		<div class="lg:hidden hidden" role="dialog" aria-modal="true" id="mobile-menu">
+			<!-- Background backdrop, hidden by default -->
+			<div class="fixed inset-0 z-10 bg-gray-500 bg-opacity-75 transition-opacity hidden" id="mobile-menu-backdrop"></div>
+			<div class="fixed inset-y-0 left-0 z-10 w-full overflow-y-auto bg-white px-6 py-6 transform transition-transform -translate-x-full" id="mobile-menu-panel">
 				<div class="flex items-center justify-between">
 					<div class="flex flex-1">
-						<button type="button" class="-m-2.5 rounded-md p-2.5 text-gray-700">
+						<button type="button" class="-m-2.5 rounded-md p-2.5 text-gray-700" id="mobile-menu-close">
 							<span class="sr-only">Close menu</span>
 							<svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"></path>
 							</svg>
 						</button>
 					</div>
-					<a href="/" class="-m-1.5 p-1.5">
+					<a href="/" class="-m-1.5 p-1.5 mobile-menu-link">
 						<span class="sr-only">Pole Prediction</span>
 						<img class="h-8 w-auto" src="/static/logo/pole-prediction-icon.svg" alt="Pole Prediction"/>
 					</a>
@@ -146,7 +146,7 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 						}
 					</div>
 				</div>
-				<div class="mt-6 space-y-2">
+				<div class="mt-6 space-y-2 mobile-menu-links">
 					@MobileNavLink("/f1/2025", currentURI) {
 						Formula 1 
 					}
@@ -159,5 +159,58 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 				</div>
 			</div>
 		</div>
+		
+		<script>
+			// Initialize mobile menu functionality when the DOM is loaded
+			document.addEventListener('DOMContentLoaded', function() {
+				const mobileMenuButton = document.getElementById('mobile-menu-button');
+				const mobileMenu = document.getElementById('mobile-menu');
+				const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+				const mobileMenuPanel = document.getElementById('mobile-menu-panel');
+				const mobileMenuClose = document.getElementById('mobile-menu-close');
+				const mobileMenuLinks = document.querySelectorAll('.mobile-menu-links a, .mobile-menu-link');
+				
+				// Function to open the mobile menu
+				function openMobileMenu() {
+					mobileMenu.classList.remove('hidden');
+					setTimeout(() => {
+						mobileMenuBackdrop.classList.remove('hidden');
+						mobileMenuPanel.classList.remove('-translate-x-full');
+					}, 10);
+					document.body.style.overflow = 'hidden'; // Prevent scrolling
+				}
+				
+				// Function to close the mobile menu
+				function closeMobileMenu() {
+					mobileMenuBackdrop.classList.add('hidden');
+					mobileMenuPanel.classList.add('-translate-x-full');
+					setTimeout(() => {
+						mobileMenu.classList.add('hidden');
+					}, 300); // Match the transition duration
+					document.body.style.overflow = ''; // Restore scrolling
+				}
+				
+				// Open menu when the button is clicked
+				mobileMenuButton.addEventListener('click', openMobileMenu);
+				
+				// Close menu when the close button is clicked
+				mobileMenuClose.addEventListener('click', closeMobileMenu);
+				
+				// Close menu when the backdrop is clicked
+				mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
+				
+				// Close menu when any menu link is clicked
+				mobileMenuLinks.forEach(link => {
+					link.addEventListener('click', closeMobileMenu);
+				});
+				
+				// Close menu when escape key is pressed
+				document.addEventListener('keydown', function(event) {
+					if (event.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
+						closeMobileMenu();
+					}
+				});
+			});
+		</script>
 	</header>
 }
