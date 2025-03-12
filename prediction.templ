@@ -26,6 +26,7 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 	<script>
+
 		// This function will be called when the DOM is loaded
 		document.addEventListener('DOMContentLoaded', function() {
 			// Check if we're on a mobile device and show instructions
@@ -600,6 +601,34 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 										});
 									}
 								});
+							}
+							function getTimeUntil(deadline) {
+								const now = new Date();
+								
+								// If deadline has passed, return "0"
+								if (now >= deadline) {
+									return "0";
+								}
+								
+								// Calculate time difference in milliseconds
+								const timeDiff = deadline - now;
+								
+								// Convert to days, hours, minutes
+								const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+								const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+								const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+								
+								// Format the output
+								let timeUntil = "";
+								if (days > 0) {
+									timeUntil += `${days} day${days !== 1 ? 's' : ''} `;
+								}
+								if (hours > 0 || days > 0) {
+									timeUntil += `${hours} hour${hours !== 1 ? 's' : ''} `;
+								}
+								timeUntil += `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+								
+								return timeUntil;
 							}
 							
 							function setupSortable(container) {
