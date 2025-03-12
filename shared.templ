@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"strings"
+	"time"
 )
 
 templ NullableString(ifNull string, nullable sql.NullString) {
@@ -159,7 +160,6 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 				</div>
 			</div>
 		</div>
-		
 		<script>
 			// Initialize mobile menu functionality when the DOM is loaded
 			document.addEventListener('DOMContentLoaded', function() {
@@ -213,4 +213,42 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 			});
 		</script>
 	</header>
+}
+
+// FormatTimeInLondon formats a timestamp as a human-readable date and time in Europe/London timezone
+func FormatTimeInLondon(timestamp string) (string, error) {
+	if timestamp == "" {
+		return "TBD", nil
+	}
+
+	// Parse the timestamp
+	t, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		// Try parsing without timezone - assuming UTC
+		t, err = time.Parse("2006-01-02 15:04:05", timestamp)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Load London location
+	loc, err := time.LoadLocation("Europe/London")
+	if err != nil {
+		return "", err
+	}
+
+	// Convert to London time
+	londonTime := t.In(loc)
+
+	// Format as human readable
+	return londonTime.Format("Mon, 02 Jan, 15:04 MST"), nil
+}
+
+// FormatLondonTime is a templ helper function to format timestamps in London timezone
+templ FormatLondonTime(timestamp string) {
+	if formatted, err := FormatTimeInLondon(timestamp); err == nil {
+		{ formatted }
+	} else {
+		{ timestamp }
+	}
 }
