@@ -416,7 +416,9 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 									<li>
 										<a href={ templ.URL("/formulaone/event/" + strconv.FormatInt(event.ID, 10)) } class="flex items-center p-2 hover:bg-gray-50 rounded-md transition">
 											<span class="text-gray-700 font-medium">Round { strconv.FormatInt(event.Round, 10) }</span>
-											<span class="ml-3 text-gray-900">{ event.Name.String }</span>
+											<span class="ml-3 text-gray-900">
+												@ShowEventName(event)
+											</span>
 										</a>
 									</li>
 								}

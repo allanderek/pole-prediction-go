@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"strings"
 	"time"
+
+	"github.com/allanderek/pole-prediction-go/datastore"
 )
 
 templ NullableString(ifNull string, nullable sql.NullString) {
@@ -11,6 +13,13 @@ templ NullableString(ifNull string, nullable sql.NullString) {
 		{ nullable.String }
 	} else {
 		{ ifNull }
+	}
+}
+
+templ ShowEventName(event datastore.FormulaOneEventsView) {
+	@NullableString("Unknown event name", event.Name)
+	if event.Issprint > 0 {
+		🏃
 	}
 }
 

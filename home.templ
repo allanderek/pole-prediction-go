@@ -9,13 +9,6 @@ templ Footer() {
 	<footer class="bg-slate-900"></footer>
 }
 
-templ ShowEventName(event datastore.FormulaOneEventsView) {
-	@NullableString("Unknown event name", event.Name)
-	if event.Issprint > 0 {
-		🏃
-	}
-}
-
 templ HomePage(cookieInfo CookieInfo, events []datastore.FormulaOneEventsView) {
 	@Page(
 		"Pole prediction",
@@ -44,8 +37,9 @@ templ HomePage(cookieInfo CookieInfo, events []datastore.FormulaOneEventsView) {
 											@ShowEventName(event)
 										</a>
 									</td>
-									<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">@FormatLondonTime(event.StartTime)
-</td>
+									<td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+										@FormatLondonTime(event.StartTime)
+									</td>
 								</tr>
 							}
 						</tbody>
