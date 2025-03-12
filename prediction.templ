@@ -159,7 +159,7 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 					<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 mr-4 font-semibold">${entrant.Number}</div>
 					<div class="flex-1">
 						<div class="font-semibold">${entrant.DriverName.String}</div>
-						<div style="color: ${teamColor};">${entrant.TeamShortname.String}</div>
+						<div style="color: ${teamColor};">${entrant.TeamShortname}</div>
 					</div>
 					<div class="flex items-center">
 						${moveUpButton}
@@ -365,7 +365,7 @@ func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPred
 
 		// Create a set of predicted entrant IDs to identify unpredicted entrants later
 		predictedEntrantIDs := make(map[int64]bool)
-		
+
 		// First, add entrants according to user's prediction order
 		sortedEntrants = nil // Clear the sorted entrants slice
 		for _, entrantID := range userPrediction {
@@ -691,7 +691,7 @@ func generateTeamsJSON(teams []datastore.GetTeamsByFormulaOneSeasonRow, userPred
 
 		// Create a set of predicted team IDs to identify unpredicted teams later
 		predictedTeamIDs := make(map[int64]bool)
-		
+
 		// First, add teams according to user's prediction order
 		sortedTeams = nil // Clear the sorted teams slice
 		for i := int64(1); i <= int64(len(userPrediction)); i++ {
