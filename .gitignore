@@ -11,6 +11,9 @@ debug.predictions.db
 # Production database
 predictions.db
 
+# Production binary
+pole-prediction-go
+
 # Devenv
 .devenv*
 devenv.local.nix

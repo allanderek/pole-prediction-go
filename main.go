@@ -63,7 +63,7 @@ func (a *App) initTokenAuth(jwtSecret string) {
 func main() {
 	applyConfig()
 
-	u, _ := url.Parse("sqlite:debug.predictions.db")
+	u, _ := url.Parse(fmt.Sprintf("sqlite:%s", app.Config.DBFilepath))
 	dbb := dbmate.New(u)
 
 	err := dbb.CreateAndMigrate()
@@ -71,7 +71,7 @@ func main() {
 		log.StartupFailure("Error migrating DB", err)
 	}
 
-	db, err := sql.Open("sqlite", "debug.predictions.db")
+	db, err := sql.Open("sqlite", app.Config.DBFilepath)
 	if err != nil {
 		log.StartupFailure("Error initialising DB", err)
 	}
@@ -85,7 +85,7 @@ func main() {
 	}
 
 	log.StartupMsg("Listening and serving ...")
-	http.ListenAndServe(":3003", router(authHandler))
+	http.ListenAndServe(fmt.Sprintf(":%d", app.Config.Port), router(authHandler))
 }
 
 func GetEnvironment() string {

@@ -11,6 +11,8 @@ type Config struct {
 	LogLevel      int    `json:"logLevel"`
 	PrettyLogging bool   `json:"prettyLogging"`
 	JWTSecret     string `json:"jwtSecret"`
+	DBFilepath    string `json:"dbFilepath"`
+	Port          int    `json:"port"`
 }
 
 func GetConfig(projectRoot, environment string) (Config, string) {
