@@ -83,30 +83,9 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			// Render entrants list
 			const entrantsList = document.getElementById('entrants-list');
 			
-			// Sort entrants by previous prediction if available, otherwise by default order
-			const userPrediction = sessionData.userPrediction || [];
-			
-			// Create a copy of entrants we can modify
-			let sortedEntrants = [...entrants];
-			
-			// If user has a previous prediction, use that order
-			if (userPrediction.length > 0) {
-				// Create a map for quick lookup
-				const entrantMap = new Map(entrants.map(e => [e.id, e]));
-				
-				// Order according to previous prediction
-				sortedEntrants = userPrediction.map(id => entrantMap.get(id))
-					// Filter out any entrant IDs that no longer exist
-					.filter(e => e !== undefined);
-				
-				// Add any new entrants that weren't in the previous prediction
-				const predictedIds = new Set(userPrediction);
-				const newEntrants = entrants.filter(e => !predictedIds.has(e.id));
-				sortedEntrants = [...sortedEntrants, ...newEntrants];
-			}
-			
+			// Entrants are already sorted on the backend
 			// Render entrants as draggable items
-			renderEntrants(sortedEntrants, entrantsList);
+			renderEntrants(entrants, entrantsList);
 			
 			// Set up sortable.js for drag and drop (touch-friendly)
 			setupSortable(entrantsList);
@@ -366,17 +345,47 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 
 // SessionPredictionData holds all the data needed for the prediction component
 type SessionPredictionData struct {
-	Session        datastore.FormulaOneSession                   `json:"session"`
-	Entrants       []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
-	UserPrediction []int64                                       `json:"userPrediction,omitempty"`
+	Session  datastore.FormulaOneSession                   `json:"session"`
+	Entrants []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
 }
 
 // Helper function to generate the JSON data attribute
 func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPrediction []int64) string {
+	// Create a copy of entrants that we can sort
+	sortedEntrants := make([]datastore.GetFormulaOneEntrantsBySessionRow, len(sessionData.Entrants))
+	copy(sortedEntrants, sessionData.Entrants)
+
+	// If user has a previous prediction, use that order
+	if len(userPrediction) > 0 {
+		// Create a map for entrant lookup by ID
+		entrantMap := make(map[int64]datastore.GetFormulaOneEntrantsBySessionRow)
+		for _, entrant := range sessionData.Entrants {
+			entrantMap[entrant.ID] = entrant
+		}
+
+		// Create a set of predicted entrant IDs to identify unpredicted entrants later
+		predictedEntrantIDs := make(map[int64]bool)
+		
+		// First, add entrants according to user's prediction order
+		sortedEntrants = nil // Clear the sorted entrants slice
+		for _, entrantID := range userPrediction {
+			if entrant, exists := entrantMap[entrantID]; exists {
+				sortedEntrants = append(sortedEntrants, entrant)
+				predictedEntrantIDs[entrantID] = true
+			}
+		}
+
+		// Then add any entrants that weren't in the user's prediction
+		for _, entrant := range sessionData.Entrants {
+			if !predictedEntrantIDs[entrant.ID] {
+				sortedEntrants = append(sortedEntrants, entrant)
+			}
+		}
+	}
+
 	data := SessionPredictionData{
-		Session:        sessionData.Session,
-		Entrants:       sessionData.Entrants,
-		UserPrediction: userPrediction,
+		Session:  sessionData.Session,
+		Entrants: sortedEntrants,
 	}
 
 	jsonData, err := json.Marshal(data)
