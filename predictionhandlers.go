@@ -255,7 +255,7 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 }
 
 // FormulaOneSeasonStart is the start time for the Formula One season
-var FormulaOneSeasonStart string = "2025-03-12T01:30:00Z"
+var FormulaOneSeasonStart string = "2025-03-14T01:30:00Z"
 
 // SaveFormulaOneSeasonPrediction handles saving a user's prediction for a season's constructor standings
 func (h *CookieAuthHandler) SaveFormulaOneSeasonPrediction(w http.ResponseWriter, r *http.Request) {
