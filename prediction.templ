@@ -465,6 +465,45 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 								const teamsData = JSON.parse(seasonComponent.getAttribute('data-teams'));
 								const teams = teamsData.teams;
 								const season = teamsData.season;
+								const startTime = teamsData.start_time;
+								
+								// Check if the season has started
+								const hasStarted = startTime ? new Date(startTime) < new Date() : false;
+								const deadlineContainer = document.createElement('div');
+								deadlineContainer.id = 'season-deadline-container';
+								deadlineContainer.className = 'text-left mb-4';
+								seasonComponent.insertBefore(deadlineContainer, document.getElementById('teams-list'));
+								
+								if (hasStarted) {
+									deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
+									if (document.getElementById('save-prediction')) {
+										document.getElementById('save-prediction').disabled = true;
+										document.getElementById('save-prediction').classList.add('bg-gray-400');
+										document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
+									}
+									seasonComponent.classList.add('opacity-75');
+								} else if (startTime) {
+									const deadline = new Date(startTime);
+									const timeUntil = getTimeUntil(deadline);
+									deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${timeUntil}</div>`;
+									
+									// Update countdown every minute
+									setInterval(() => {
+										const updatedTimeUntil = getTimeUntil(deadline);
+										deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${updatedTimeUntil}</div>`;
+										
+										// Disable if time has passed
+										if (new Date() >= deadline) {
+											deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
+											if (document.getElementById('save-prediction')) {
+												document.getElementById('save-prediction').disabled = true;
+												document.getElementById('save-prediction').classList.add('bg-gray-400');
+												document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
+											}
+											seasonComponent.classList.add('opacity-75');
+										}
+									}, 60000);
+								}
 								
 								// Teams are already sorted on the backend
 								// Render teams as draggable items
@@ -478,6 +517,11 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 								const saveButton = document.getElementById('save-prediction');
 								if (saveButton) {
 									saveButton.addEventListener('click', function() {
+										if (hasStarted) {
+											alert('Cannot submit prediction after the season has started.');
+											return;
+										}
+										
 										// Get current order of teams
 										const teamItems = teamsList.querySelectorAll('.team-item');
 										const orderedIds = Array.from(teamItems).map(item => 
@@ -667,8 +711,9 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 
 // SeasonTeamsData holds all the data needed for the season prediction component
 type SeasonTeamsData struct {
-	Teams  []datastore.GetTeamsByFormulaOneSeasonRow `json:"teams"`
-	Season string                                    `json:"season"`
+	Teams     []datastore.GetTeamsByFormulaOneSeasonRow `json:"teams"`
+	Season    string                                    `json:"season"`
+	StartTime string                                    `json:"start_time"`
 }
 
 // Helper function to generate the JSON data attribute for teams
@@ -714,8 +759,9 @@ func generateTeamsJSON(teams []datastore.GetTeamsByFormulaOneSeasonRow, userPred
 	}
 
 	data := SeasonTeamsData{
-		Teams:  sortedTeams,
-		Season: season,
+		Teams:     sortedTeams,
+		Season:    season,
+		StartTime: FormulaOneSeasonStart,
 	}
 
 	jsonData, err := json.Marshal(data)
