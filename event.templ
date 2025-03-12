@@ -17,7 +17,9 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 				<p class="text-xl font-semibold text-gray-800">
 					@ShowEventName(event)
 				</p>
-				<p class="text-md text-gray-600 mb-6">Event Date: { event.StartTime }</p>
+				<p class="text-md text-gray-600 mb-6">
+					@FormatLondonTime(event.StartTime)
+				</p>
 				<h2 class="text-2xl font-bold text-gray-900 mt-8 mb-4">Sessions</h2>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 					for _, sessionData := range eventData.Sessions {
@@ -27,7 +29,9 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 								<h3 class="text-xl font-semibold text-gray-800">{ session.Name }</h3>
 							</div>
 							if session.StartTime.Valid {
-								<p class="text-sm text-gray-600 mb-3">Start: { session.StartTime.String }</p>
+								<p class="text-sm text-gray-600 mb-3">
+									@FormatLondonTime(session.StartTime.String)
+								</p>
 							}
 							<div class="mt-4">
 								<a href={ templ.URL(fmt.Sprintf("/formulaone/session/%d", session.ID)) } class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
@@ -63,7 +67,7 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 			<div class="bg-white shadow-md rounded-lg p-6 mb-8">
 				<h1 class="text-3xl font-bold text-gray-900 mb-4">{ session.Name }</h1>
 				if session.StartTime.Valid {
-					<p class="text-lg text-gray-700 mb-2">Start Time: { session.StartTime.String }</p>
+					<p class="text-lg text-gray-700 mb-2">Start Time: @FormatLondonTime(session.StartTime.String)</p>
 				}
 				<div class="mt-6">
 					<h2 class="text-xl font-semibold text-gray-800 mb-4">Session Participants</h2>
