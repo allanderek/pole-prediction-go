@@ -454,33 +454,11 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 								const teamsData = JSON.parse(seasonComponent.getAttribute('data-teams'));
 								const teams = teamsData.teams;
 								const season = teamsData.season;
-								const userPrediction = teamsData.userPrediction || [];
 								
-								// Create a copy of teams we can modify
-								let sortedTeams = [...teams];
-								
-								// If user has a previous prediction, use that order
-								if (userPrediction.length > 0) {
-									// Create a map for quick lookup
-									const teamMap = new Map(teams.map(t => [t.id, t]));
-									
-									// Order according to previous prediction
-									sortedTeams = userPrediction.map(id => teamMap.get(id))
-										// Filter out any team IDs that no longer exist
-										.filter(t => t !== undefined);
-									
-									// Add any new teams that weren't in the previous prediction
-									const predictedIds = new Set(userPrediction);
-									const newTeams = teams.filter(t => !predictedIds.has(t.id));
-									sortedTeams = [...sortedTeams, ...newTeams];
-								}
-								
-								// Limit to top 10 teams
-								sortedTeams = sortedTeams.slice(0, 10);
-								
+								// Teams are already sorted on the backend
 								// Render teams as draggable items
 								const teamsList = document.getElementById('teams-list');
-								renderTeams(sortedTeams, teamsList);
+								renderTeams(teams, teamsList);
 								
 								// Set up sortable.js for drag and drop (touch-friendly)
 								setupSortable(teamsList);
@@ -678,33 +656,55 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 
 // SeasonTeamsData holds all the data needed for the season prediction component
 type SeasonTeamsData struct {
-	Teams          []datastore.GetTeamsByFormulaOneSeasonRow `json:"teams"`
-	UserPrediction []int64                                   `json:"userPrediction,omitempty"`
-	Season         string                                    `json:"season"`
+	Teams  []datastore.GetTeamsByFormulaOneSeasonRow `json:"teams"`
+	Season string                                    `json:"season"`
 }
 
 // Helper function to generate the JSON data attribute for teams
 func generateTeamsJSON(teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, season string) string {
-	// Extract team IDs from user prediction in order
-	userPredictionIDs := make([]int64, 0, len(userPrediction))
+	// Create a copy of teams that we can sort
+	sortedTeams := make([]datastore.GetTeamsByFormulaOneSeasonRow, len(teams))
+	copy(sortedTeams, teams)
 
-	// Create a map to sort the predictions by position
-	positionMap := make(map[int64]int64) // position -> team_id
-	for _, pred := range userPrediction {
-		positionMap[pred.Position] = pred.Team
-	}
+	// If user has a previous prediction, use that order
+	if len(userPrediction) > 0 {
+		// Create a map for team lookup by ID
+		teamMap := make(map[int64]datastore.GetTeamsByFormulaOneSeasonRow)
+		for _, team := range teams {
+			teamMap[team.ID] = team
+		}
 
-	// Add predictions in position order
-	for i := int64(1); i <= int64(len(userPrediction)); i++ {
-		if teamID, ok := positionMap[i]; ok {
-			userPredictionIDs = append(userPredictionIDs, teamID)
+		// Create a map to sort the predictions by position
+		positionTeamMap := make(map[int64]int64) // position -> team_id
+		for _, pred := range userPrediction {
+			positionTeamMap[pred.Position] = pred.Team
+		}
+
+		// Create a set of predicted team IDs to identify unpredicted teams later
+		predictedTeamIDs := make(map[int64]bool)
+		
+		// First, add teams according to user's prediction order
+		sortedTeams = nil // Clear the sorted teams slice
+		for i := int64(1); i <= int64(len(userPrediction)); i++ {
+			if teamID, ok := positionTeamMap[i]; ok {
+				if team, exists := teamMap[teamID]; exists {
+					sortedTeams = append(sortedTeams, team)
+					predictedTeamIDs[teamID] = true
+				}
+			}
+		}
+
+		// Then add any teams that weren't in the user's prediction
+		for _, team := range teams {
+			if !predictedTeamIDs[team.ID] {
+				sortedTeams = append(sortedTeams, team)
+			}
 		}
 	}
 
 	data := SeasonTeamsData{
-		Teams:          teams,
-		UserPrediction: userPredictionIDs,
-		Season:         season,
+		Teams:  sortedTeams,
+		Season: season,
 	}
 
 	jsonData, err := json.Marshal(data)
