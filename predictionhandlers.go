@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/a-h/templ"
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"github.com/allanderek/pole-prediction-go/log"
-	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
@@ -209,13 +210,13 @@ type SeasonPredictionRequest struct {
 func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cookieInfo := h.verifyCookie(r)
-	
+
 	// Get season from URL
 	season := chi.URLParam(r, "season")
 	if season == "" {
 		season = currentSeason // Default to current season (defined in handlers.go)
 	}
-	
+
 	// Get teams for this season
 	teams, err := app.Queries.GetTeamsByFormulaOneSeason(ctx, season)
 	if err != nil {
@@ -223,7 +224,7 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 		http.Error(w, "Unable to retrieve teams", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// If user is authenticated, get their existing season prediction
 	var userPrediction []datastore.GetFormulaOneSeasonPredictionRow
 	if cookieInfo.IsAuthenticated {
@@ -240,7 +241,7 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 			}
 		}
 	}
-	
+
 	// Get Formula One events for the season for navigation
 	events, err := app.Queries.GetFormulaOneEvents(ctx, season)
 	if err != nil {
@@ -248,7 +249,7 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 		// Don't return an error here, just continue with empty events
 		events = []datastore.FormulaOneEventsView{}
 	}
-	
+
 	// Pass the data to the template
 	templ.Handler(FormulaOneSeasonPage(cookieInfo, season, teams, userPrediction, events)).ServeHTTP(w, r)
 }
@@ -317,11 +318,13 @@ func (h *CookieAuthHandler) SaveFormulaOneSeasonPrediction(w http.ResponseWriter
 		}
 	}
 
+	numValidTeams := len(teams)
+
 	// Check we have the right number of teams (for constructor standings, usually top 10)
-	if len(req.TeamOrder) > 10 {
+	if len(req.TeamOrder) > numValidTeams {
 		sendJSONResponse(w, PredictionResponse{
 			Success: false,
-			Message: "Prediction should include at most 10 teams",
+			Message: fmt.Sprintf("Prediction should include at most %d teams", numValidTeams),
 		}, http.StatusBadRequest)
 		return
 	}
