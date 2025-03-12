@@ -10,7 +10,7 @@ CREATE TABLE users (
 CREATE TABLE sqlite_sequence(name,seq);
 CREATE TABLE drivers ( 
     id integer primary key autoincrement, 
-    name text 
+    name text not null
 );
 CREATE TABLE formula_e_constructors (
     id integer primary key autoincrement,
