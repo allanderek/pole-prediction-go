@@ -117,7 +117,11 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 			<div class="flex flex-1 justify-end">
 				if cookieInfo.IsAuthenticated {
 					@DesktopNavLink("/profile", currentURI) {
-						{ cookieInfo.FullName } <span aria-hidden="true">&rarr;</span>
+						{ cookieInfo.FullName }
+						if cookieInfo.IsAdmin {
+							<span class="admin-icon" aria-label="Administrator">⚙️</span>
+						}
+						<span aria-hidden="true">&rarr;</span>
 					}
 				} else {
 					@DesktopNavLink("/login", currentURI) {
