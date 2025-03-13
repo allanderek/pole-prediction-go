@@ -43,23 +43,30 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			let startTime = null;
 			
 			// Parse start time if available
-			if (sessionData.session.start_time && sessionData.session.start_time.String) {
-				startTime = sessionData.session.start_time.String;
+			if (sessionData.session.StartTime && sessionData.session.StartTime.String) {
+				startTime = sessionData.session.StartTime.String;
 			}
 
 			// Update session name
 			document.getElementById('session-name').textContent = sessionName;
 			
 			// Check if the session has started
-			const hasStarted = startTime ? new Date(startTime) < new Date() : false;
+			let hasStarted = startTime ? new Date(startTime) < new Date() : false;
 			const deadlineContainer = document.getElementById('deadline-container');
+			const saveButton = document.getElementById('save-prediction');
+			
+			// Function to update the UI when the session has started
+			function disableSubmission() {
+				deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
+				saveButton.disabled = true;
+				saveButton.classList.add('bg-gray-400');
+				saveButton.classList.remove('bg-green-500', 'hover:bg-green-600');
+				sessionDataElement.classList.add('opacity-75');
+				hasStarted = true;
+			}
 			
 			if (hasStarted) {
-				deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
-				document.getElementById('save-prediction').disabled = true;
-				document.getElementById('save-prediction').classList.add('bg-gray-400');
-				document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
-				sessionDataElement.classList.add('opacity-75');
+				disableSubmission();
 			} else if (startTime) {
 				const deadline = new Date(startTime);
 				const timeUntil = getTimeUntil(deadline);
@@ -67,16 +74,14 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 				
 				// Update countdown every minute
 				setInterval(() => {
+					const now = new Date();
 					const updatedTimeUntil = getTimeUntil(deadline);
-					deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${updatedTimeUntil}</div>`;
 					
 					// Disable if time has passed
-					if (new Date() >= deadline) {
-						deadlineContainer.innerHTML = '<div class="text-red-600 font-bold">Prediction period has ended</div>';
-						document.getElementById('save-prediction').disabled = true;
-						document.getElementById('save-prediction').classList.add('bg-gray-400');
-						document.getElementById('save-prediction').classList.remove('bg-green-500', 'hover:bg-green-600');
-						sessionDataElement.classList.add('opacity-75');
+					if (now >= deadline) {
+						disableSubmission();
+					} else {
+						deadlineContainer.innerHTML = `<div class="text-blue-800">Time remaining: ${updatedTimeUntil}</div>`;
 					}
 				}, 60000);
 			}
@@ -92,7 +97,7 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 			setupSortable(entrantsList);
 			
 			// Handle save button
-			document.getElementById('save-prediction').addEventListener('click', function() {
+			saveButton.addEventListener('click', function() {
 				if (hasStarted) {
 					alert('Cannot submit prediction after the session has started.');
 					return;
@@ -362,8 +367,9 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 
 // SessionPredictionData holds all the data needed for the prediction component
 type SessionPredictionData struct {
-	Session  datastore.FormulaOneSession                   `json:"session"`
-	Entrants []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
+	Session   datastore.FormulaOneSession                   `json:"session"`
+	Entrants  []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
+	StartTime string                                        `json:"start_time"`
 }
 
 // Helper function to generate the JSON data attribute
