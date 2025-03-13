@@ -12,7 +12,12 @@ debug.predictions.db
 predictions.db
 
 # Production binary
+pole-prediction-backend
+
+# Binary that Claude often produces
 pole-prediction-go
+
+
 
 # Devenv
 .devenv*

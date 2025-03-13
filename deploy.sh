@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BIN=pole-prediction-go
+BIN=pole-prediction-backend
 export POLEPREDICTION_ENV=prod 
 export POLEPREDICTION_SESSION=dfv89sdfgij534tnreu98dfvknjdfnkldvfiu9dvfiuodvfknm 
 
