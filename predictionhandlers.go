@@ -80,7 +80,7 @@ func (h *CookieAuthHandler) SaveFormulaOnePrediction(w http.ResponseWriter, r *h
 			sendJSONResponse(w, PredictionResponse{
 				Success: false,
 				Message: "Predictions cannot be submitted after the session has started",
-			}, http.StatusBadRequest)
+			}, http.StatusOK) // We give an 'OK' here otherwise the component does not display the message.
 			return
 		}
 	}
