@@ -209,16 +209,32 @@ templ FormulaOneSessionPrediction(sessionData FormulaOneSessionWithEntrants, use
 		
 		function moveEntrantUp(item, container) {
 			const prevItem = item.previousElementSibling;
-			if (prevItem && !prevItem.classList.contains('border-t')) {
-				container.insertBefore(item, prevItem);
+			if (prevItem) {
+				// Skip the divider if it's a border-t element (points line)
+				if (prevItem.classList.contains('border-t')) {
+					const prevPrevItem = prevItem.previousElementSibling;
+					if (prevPrevItem) {
+						container.insertBefore(item, prevPrevItem);
+					}
+				} else {
+					container.insertBefore(item, prevItem);
+				}
 				updatePositionsAndStyles(container);
 			}
 		}
 		
 		function moveEntrantDown(item, container) {
 			const nextItem = item.nextElementSibling;
-			if (nextItem && !nextItem.classList.contains('border-t')) {
-				container.insertBefore(nextItem, item);
+			if (nextItem) {
+				// Skip the divider if it's a border-t element (points line)
+				if (nextItem.classList.contains('border-t')) {
+					const nextNextItem = nextItem.nextElementSibling;
+					if (nextNextItem) {
+						container.insertBefore(nextNextItem, item);
+					}
+				} else {
+					container.insertBefore(nextItem, item);
+				}
 				updatePositionsAndStyles(container);
 			}
 		}
