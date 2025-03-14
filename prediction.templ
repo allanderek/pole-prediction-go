@@ -762,14 +762,13 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 				<div class="bg-white shadow-md rounded-lg p-6 mt-8">
 					<h2 class="text-2xl font-bold text-gray-900 mb-6">Season Predictions Leaderboard</h2>
 					<div class="space-y-4">
-						for i, prediction := range allPredictions {
-							{{ isTopThree := i < 3 }}
-							<details class={ templ.KV("border rounded-lg p-4", true), templ.KV("border-yellow-400 bg-yellow-50", isTopThree), templ.KV("border-gray-200", !isTopThree) }>
+						for _, prediction := range allPredictions {
+							<details class="border rounded-lg p-4 border-yellow-400 bg-yellow-50">
 								<summary class="flex justify-between items-center font-medium cursor-pointer">
-									<span class={ templ.KV("font-bold", isTopThree) }>
+									<span class="font-bold">
 										{ prediction.UserName }
 									</span>
-									<span class={ templ.KV("text-lg font-bold text-green-700", isTopThree), templ.KV("text-green-600", !isTopThree) }>
+									<span class="text-lg font-bold text-green-700">
 										{ fmt.Sprintf("%d points", prediction.Total) }
 									</span>
 								</summary>

@@ -280,13 +280,13 @@ with
         order by total desc
     ),
     predictions as (
-        select
-            constructors.team_id as team_id,
-            constructors.total as total,
-            lines.position as position,
-            lines.user as user
-            from constructors
-            inner join formula_one_season_prediction_lines as lines on constructors.team_id = lines.team
+    select
+        lines.team as team_id,
+        COALESCE(constructors.total, 0) as total,  -- Use 0 if no results yet
+        lines.position as position,
+        lines.user as user
+        from formula_one_season_prediction_lines as lines
+        left join constructors on lines.team = constructors.team_id
     )
 select
     users.id as user,
@@ -297,7 +297,7 @@ select
     coalesce(teams.secondary_color, '#000000') as team_secondary_color,
     cast(coalesce(max(0, constructors.total - predictions.total), 0) as integer) as difference
     from predictions
-    inner join constructors on predictions.position = constructors.position
+    left join constructors on predictions.position = constructors.position
     inner join formula_one_teams as teams on predictions.team_id = teams.id
     inner join users on predictions.user = users.id
     order by predictions.position asc
