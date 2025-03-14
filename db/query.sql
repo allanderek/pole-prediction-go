@@ -223,82 +223,103 @@ JOIN formula_one_sessions s ON up.session = s.id
 ORDER BY u.fullname, up.position
 ;
 
-
 -- name: GetFormulaOneSeasonLeaderboard :many
 with
-    results as (select * from formula_one_prediction_lines where user == ""),
+    -- First, get all the season predictions from users
+    user_predictions as (
+        select
+            lines.user,
+            users.fullname,
+            lines.position,
+            lines.team,
+            teams.shortname as team_name,
+            coalesce(teams.color, '#000000') as team_color,
+            coalesce(teams.secondary_color, '#000000') as team_secondary_color
+        from formula_one_season_prediction_lines as lines
+        inner join users on lines.user = users.id
+        inner join formula_one_teams as teams on lines.team = teams.id
+        where teams.season = @season 
+    ),
+    -- Only calculate constructor standings if results exist
+    results as (
+        select * from formula_one_prediction_lines where user is null and session in (
+            select id from formula_one_sessions where event in (
+                select id from formula_one_events where season = @season
+            )
+        )
+    ),
+    -- Only process constructor standings if we have results
     scored_lines as (
-    select 
-        sessions.name as session_name,
-        case 
-            when sessions.name = "race" then
-                case 
-                    when results.position = 1 then 25
-                    when results.position = 2 then 18
-                    when results.position = 3 then 15
-                    when results.position = 4 then 12
-                    when results.position = 5 then 10
-                    when results.position = 6 then 8
-                    when results.position = 7 then 6
-                    when results.position = 8 then 4
-                    when results.position = 9 then 2
-                    when results.position = 10 then 1
-                else 0
-                end 
-            when sessions.name = "sprint" then
-                case 
-                    when results.position = 1 then 8
-                    when results.position = 2 then 7
-                    when results.position = 3 then 6
-                    when results.position = 4 then 5
-                    when results.position = 5 then 4
-                    when results.position = 6 then 3
-                    when results.position = 7 then 2
-                    when results.position = 8 then 1
-                else 0
-                end 
-        end
-        +
-        case when results.fastest_lap = "true" and sessions.fastest_lap == true then 1 else 0 end
-            as score,
-        teams.shortname as team_name,
-        teams.id as team_id
+        select 
+            sessions.name as session_name,
+            case 
+                when sessions.name = 'race' then
+                    case 
+                        when results.position = 1 then 25
+                        when results.position = 2 then 18
+                        when results.position = 3 then 15
+                        when results.position = 4 then 12
+                        when results.position = 5 then 10
+                        when results.position = 6 then 8
+                        when results.position = 7 then 6
+                        when results.position = 8 then 4
+                        when results.position = 9 then 2
+                        when results.position = 10 then 1
+                    else 0
+                    end 
+                when sessions.name = 'sprint' then
+                    case 
+                        when results.position = 1 then 8
+                        when results.position = 2 then 7
+                        when results.position = 3 then 6
+                        when results.position = 4 then 5
+                        when results.position = 5 then 4
+                        when results.position = 6 then 3
+                        when results.position = 7 then 2
+                        when results.position = 8 then 1
+                    else 0
+                    end 
+            end
+            +
+            case when results.fastest_lap = 'true' and sessions.fastest_lap = 1 then 1 else 0 end
+                as score,
+            teams.shortname as team_name,
+            teams.id as team_id
         from results
         inner join formula_one_sessions as sessions on results.session = sessions.id
-        inner join formula_one_events as events on sessions.event == events.id and events.season == ?
-        inner join formula_one_entrants as entrants on results.entrant == entrants.id
-        inner join formula_one_teams as teams on entrants.team == teams.id
+        inner join formula_one_events as events on sessions.event = events.id and events.season = @season
+        inner join formula_one_entrants as entrants on results.entrant = entrants.id
+        inner join formula_one_teams as teams on entrants.team = teams.id
+        where (select count(*) from results) > 0  -- Only include if results exist
     ),
+    -- Calculate constructor standings if we have results
     constructors as (
-    select 
-        row_number() over (order by sum(score) desc) as position,
-        team_name,
-        team_id,
-        sum (score) as total
+        select 
+            row_number() over (order by sum(score) desc) as position,
+            team_name,
+            team_id,
+            sum(score) as total
         from scored_lines
         group by team_id
         order by total desc
-    ),
-    predictions as (
-    select
-        lines.team as team_id,
-        COALESCE(constructors.total, 0) as total,  -- Use 0 if no results yet
-        lines.position as position,
-        lines.user as user
-        from formula_one_season_prediction_lines as lines
-        left join constructors on lines.team = constructors.team_id
     )
 select
-    users.id as user,
-    users.fullname as fullname,
-    predictions.position as position,
-    teams.shortname as team,
-    coalesce(teams.color, '#000000') as team_color,
-    coalesce(teams.secondary_color, '#000000') as team_secondary_color,
-    cast(coalesce(max(0, constructors.total - predictions.total), 0) as integer) as difference
-    from predictions
-    left join constructors on predictions.position = constructors.position
-    inner join formula_one_teams as teams on predictions.team_id = teams.id
-    inner join users on predictions.user = users.id
-    order by predictions.position asc
-    ;
+    up.user,
+    up.fullname,
+    up.position,
+    up.team_name as team,
+    up.team_color,
+    up.team_secondary_color,
+    case 
+        when (select count(*) from constructors) > 0 then  -- Check if we have results
+            cast(coalesce(
+                (select max(0, c_actual.total - c_predicted.total)
+                 from constructors c_actual
+                 join constructors c_predicted on c_predicted.team_id = up.team
+                 where c_actual.position = up.position),
+                0
+            ) as integer)
+        else 0
+    end as difference
+from user_predictions up
+order by up.user, up.position;
