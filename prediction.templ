@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/allanderek/pole-prediction-go/datastore"
 	"strconv"
 )
@@ -756,6 +757,56 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 					</div>
 				</div>
 			</div>
+			
+			<!-- Show all season predictions leaderboard if there are any -->
+			if len(allPredictions) > 0 {
+				<div class="bg-white shadow-md rounded-lg p-6 mt-8">
+					<h2 class="text-2xl font-bold text-gray-900 mb-6">Season Predictions Leaderboard</h2>
+					<div class="space-y-4">
+						for i, prediction := range allPredictions {
+							{{ isTopThree := i < 3 }}
+							<details class={ templ.KV("border rounded-lg p-4", true), templ.KV("border-yellow-400 bg-yellow-50", isTopThree), templ.KV("border-gray-200", !isTopThree) }>
+								<summary class="flex justify-between items-center font-medium cursor-pointer">
+									<span class={ templ.KV("font-bold", isTopThree) }>
+										{ prediction.UserName }
+									</span>
+									<span class={ templ.KV("text-lg font-bold text-green-700", isTopThree), templ.KV("text-green-600", !isTopThree) }>
+										{ fmt.Sprintf("%d points", prediction.Total) }
+									</span>
+								</summary>
+								<div class="mt-4 pl-4">
+									<table class="min-w-full border-collapse">
+										<thead>
+											<tr>
+												<th class="text-left py-2 px-3 bg-gray-50">Position</th>
+												<th class="text-left py-2 px-3 bg-gray-50">Team</th>
+												<th class="text-left py-2 px-3 bg-gray-50">Points</th>
+											</tr>
+										</thead>
+										<tbody>
+											for _, line := range prediction.Lines {
+												<tr class="border-b">
+													<td class="py-2 px-3">{ fmt.Sprintf("%d", line.PredictedPosition) }</td>
+													<td class="py-2 px-3">
+														<span style={ templ.SafeCSS(fmt.Sprintf("color: %s", line.TeamColor)) } class="font-medium">
+															{ line.TeamName }
+														</span>
+													</td>
+													<td class="py-2 px-3 font-medium">
+														<span class={ templ.KV("text-green-600", line.Score > 0), templ.KV("text-gray-500", line.Score == 0) }>
+															{ fmt.Sprintf("%d", line.Score) }
+														</span>
+													</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</details>
+						}
+					</div>
+				</div>
+			}
 		</div>
 	}
 }
