@@ -757,7 +757,6 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 					</div>
 				</div>
 			</div>
-			
 			<!-- Show all season predictions leaderboard if there are any -->
 			if len(allPredictions) > 0 {
 				<div class="bg-white shadow-md rounded-lg p-6 mt-8">
@@ -786,15 +785,15 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 										<tbody>
 											for _, line := range prediction.Lines {
 												<tr class="border-b">
-													<td class="py-2 px-3">{ fmt.Sprintf("%d", line.PredictedPosition) }</td>
+													<td class="py-2 px-3">{ fmt.Sprintf("%d", line.Position) }</td>
 													<td class="py-2 px-3">
 														<span style={ templ.SafeCSS(fmt.Sprintf("color: %s", line.TeamColor)) } class="font-medium">
-															{ line.TeamName }
+															{ line.Team }
 														</span>
 													</td>
 													<td class="py-2 px-3 font-medium">
-														<span class={ templ.KV("text-green-600", line.Score > 0), templ.KV("text-gray-500", line.Score == 0) }>
-															{ fmt.Sprintf("%d", line.Score) }
+														<span class={ templ.KV("text-green-600", line.Difference > 0), templ.KV("text-gray-500", line.Difference == 0) }>
+															{ fmt.Sprintf("%d", line.Difference) }
 														</span>
 													</td>
 												</tr>

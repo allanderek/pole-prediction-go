@@ -312,20 +312,12 @@ type SeasonPredictionRequest struct {
 	TeamOrder []int64 `json:"team_order"`
 }
 
-// FormulaOneSeasonPredictionLine represents a single line in a season prediction
-type FormulaOneSeasonPredictionLine struct {
-	PredictedPosition int64
-	TeamName          string
-	TeamColor         string
-	Score             int64
-}
-
 // FormulaOneScoredSeasonPrediction represents a user's complete season prediction with total score
 type FormulaOneScoredSeasonPrediction struct {
 	UserID   int64
 	UserName string
 	Total    int64
-	Lines    []FormulaOneSeasonPredictionLine
+	Lines    []datastore.GetFormulaOneSeasonLeaderboardRow
 }
 
 // FormulaOneSeasonHandler displays the Formula One season page with constructor standings prediction
@@ -411,38 +403,16 @@ func TransformSeasonPredictionLines(rows []datastore.GetFormulaOneSeasonLeaderbo
 				UserID:   row.User,
 				UserName: row.Fullname,
 				Total:    0,
-				Lines:    []FormulaOneSeasonPredictionLine{},
+				Lines:    []datastore.GetFormulaOneSeasonLeaderboardRow{},
 			}
 			userPredictions[row.User] = prediction
 		}
 
-		// Calculate difference for the total score
-		// Since Difference could be either float64 or int64, we need to handle both
-		var difference int64
-		switch diff := row.Difference.(type) {
-		case int64:
-			difference = diff
-		case float64:
-			difference = int64(diff)
-		case int:
-			difference = int64(diff)
-		default:
-			difference = 0 // Fallback if it's null or another type
-		}
-
 		// Add to the total difference (lower is better)
-		prediction.Total += difference
-
-		// Create a new prediction line with the required fields
-		predictionLine := FormulaOneSeasonPredictionLine{
-			PredictedPosition: row.Position,
-			TeamName:          row.Team,
-			TeamColor:         "#1F78B4", // Default color
-			Score:             difference,
-		}
+		prediction.Total += row.Difference
 
 		// Add the current line to the user's lines
-		prediction.Lines = append(prediction.Lines, predictionLine)
+		prediction.Lines = append(prediction.Lines, row)
 	}
 
 	// Convert map to slice for return
@@ -455,6 +425,7 @@ func TransformSeasonPredictionLines(rows []datastore.GetFormulaOneSeasonLeaderbo
 	sortSeasonPredictionsByScore(result)
 
 	// Sort each user's prediction lines by position
+	// Again we do not really need to do this since they should be in sorted order anyway from the database
 	for i := range result {
 		sortSeasonPredictionLinesByPosition(result[i].Lines)
 	}
@@ -475,9 +446,9 @@ func sortSeasonPredictionsByScore(predictions []FormulaOneScoredSeasonPrediction
 }
 
 // sortSeasonPredictionLinesByPosition sorts prediction lines by position
-func sortSeasonPredictionLinesByPosition(lines []FormulaOneSeasonPredictionLine) {
+func sortSeasonPredictionLinesByPosition(lines []datastore.GetFormulaOneSeasonLeaderboardRow) {
 	sort.Slice(lines, func(i, j int) bool {
-		return lines[i].PredictedPosition < lines[j].PredictedPosition
+		return lines[i].Position < lines[j].Position
 	})
 }
 

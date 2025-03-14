@@ -293,7 +293,9 @@ select
     users.fullname as fullname,
     predictions.position as position,
     teams.shortname as team,
-    max(0, constructors.total - predictions.total) as difference
+    coalesce(teams.color, '#000000') as team_color,
+    coalesce(teams.secondary_color, '#000000') as team_secondary_color,
+    cast(coalesce(max(0, constructors.total - predictions.total), 0) as integer) as difference
     from predictions
     inner join constructors on predictions.position = constructors.position
     inner join formula_one_teams as teams on predictions.team_id = teams.id
