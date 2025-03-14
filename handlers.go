@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"crypto/hmac"
@@ -161,8 +162,102 @@ func (h *CookieAuthHandler) FormulaOneSessionHandler(w http.ResponseWriter, r *h
 	var sessionResult []int64
 	sessionResult, _ = app.Queries.GetSessionResultEntrantIDsForSession(ctx, sessionID)
 
+	// Get predictions only if the session has started
+	var allPredictions []FormulaOneScoredPrediction
+
+	// Check if the session has started before fetching predictions
+	hasStarted := HasSessionStarted(session)
+	if hasStarted {
+		// Session has started, fetch and transform predictions
+		rows, err := app.Queries.GetFormulaOneScoredPredictionLines(ctx, sessionID)
+		if err != nil {
+			log.Error(fmt.Sprintf("Error fetching all user predictions for session %d", sessionID), err)
+			// Again, handle this error scenario
+			allPredictions = nil
+		} else {
+			// Transform into grouped predictions
+			allPredictions = TransformPredictionLines(rows)
+		}
+	} else {
+		// Session hasn't started yet, set predictions to nil
+		allPredictions = nil
+	}
+
 	// Pass the session data to the SessionPage template
-	templ.Handler(FormulaOneSessionPage(cookieInfo, sessionData, userPrediction, sessionResult)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneSessionPage(cookieInfo, sessionData, userPrediction, sessionResult, allPredictions)).ServeHTTP(w, r)
+}
+
+// FormulaOneScoredPrediction represents a user's complete prediction with total score
+type FormulaOneScoredPrediction struct {
+	UserID   int64
+	UserName string
+	Total    int64
+	Lines    []datastore.GetFormulaOneScoredPredictionLinesRow
+}
+
+// TransformPredictionLines transforms flat query results into grouped user predictions
+func TransformPredictionLines(rows []datastore.GetFormulaOneScoredPredictionLinesRow) []FormulaOneScoredPrediction {
+	// Map to store predictions by user ID
+	userPredictions := make(map[int64]*FormulaOneScoredPrediction)
+
+	// Process all rows
+	for _, row := range rows {
+		// Check if we already have a prediction for this user
+		prediction, exists := userPredictions[row.UserID]
+
+		if !exists {
+			// Create a new prediction for this user
+			prediction = &FormulaOneScoredPrediction{
+				UserID:   row.UserID,
+				UserName: row.UserName,
+				Total:    0,
+				Lines:    []datastore.GetFormulaOneScoredPredictionLinesRow{},
+			}
+			userPredictions[row.UserID] = prediction
+		}
+
+		// Add the current row to the user's lines
+		prediction.Lines = append(prediction.Lines, row)
+
+		// Add to the total score
+		prediction.Total += row.Score
+	}
+
+	// Convert map to slice for return
+	result := make([]FormulaOneScoredPrediction, 0, len(userPredictions))
+	for _, prediction := range userPredictions {
+		result = append(result, *prediction)
+	}
+
+	// Sort by total score in descending order
+	sortPredictionsByScore(result)
+
+	// Sort each user's prediction lines by predicted position
+	for i := range result {
+		// We do not necessarily need to do this since they should be sorted by the SQL query
+		sortPredictionLines(result[i].Lines)
+	}
+
+	return result
+}
+
+// sortPredictionsByScore sorts predictions by total score in descending order
+func sortPredictionsByScore(predictions []FormulaOneScoredPrediction) {
+	sort.Slice(predictions, func(i, j int) bool {
+		// Sort by total score descending
+		if predictions[i].Total != predictions[j].Total {
+			return predictions[i].Total > predictions[j].Total
+		}
+		// If scores are tied, sort by username
+		return predictions[i].UserName < predictions[j].UserName
+	})
+}
+
+// sortPredictionLines sorts prediction lines by predicted position
+func sortPredictionLines(lines []datastore.GetFormulaOneScoredPredictionLinesRow) {
+	sort.Slice(lines, func(i, j int) bool {
+		return lines[i].PredictedPosition < lines[j].PredictedPosition
+	})
 }
 
 // ProfileHandler handles displaying the user's profile

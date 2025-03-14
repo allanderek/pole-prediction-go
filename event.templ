@@ -47,7 +47,7 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 }
 
 // FormulaOneSessionPage displays a single Formula One session with prediction component
-templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSessionWithEntrants, userPrediction []int64, sessionResult []int64) {
+templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSessionWithEntrants, userPrediction []int64, sessionResult []int64, allPredictions []FormulaOneScoredPrediction) {
 	{{ session := sessionData.Session }}
 	{{ hasStarted := HasSessionStarted(session) }}
 	@Page(
@@ -68,8 +68,9 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 			<div class="bg-white shadow-md rounded-lg p-6 mb-8">
 				<h1 class="text-3xl font-bold text-gray-900 mb-4">{ session.Name }</h1>
 				if session.StartTime.Valid {
-					<p class="text-lg text-gray-700 mb-2">@FormatLondonTime(session.StartTime.String)
-</p>
+					<p class="text-lg text-gray-700 mb-2">
+						@FormatLondonTime(session.StartTime.String)
+					</p>
 				}
 				<div class="mt-6">
 					<h2 class="text-xl font-semibold text-gray-800 mb-4">Session Participants</h2>
@@ -109,7 +110,6 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 					</div>
 				</div>
 			</div>
-
 			// Admin result input - only show for admins if session has started
 			if cookieInfo.IsAdmin && hasStarted {
 				if len(sessionResult) > 0 {
@@ -124,7 +124,6 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 					</div>
 				}
 			}
-
 			// Show user prediction component
 			<div class="bg-white shadow-md rounded-lg p-6">
 				<h2 class="text-2xl font-bold text-gray-900 mb-6">Your Prediction</h2>

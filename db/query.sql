@@ -168,3 +168,56 @@ from formula_one_prediction_lines r
 where r.session = @session_id and user = ""
 order by r.position
 ;
+
+
+-- name: GetFormulaOneScoredPredictionLines :many
+WITH 
+    user_predictions AS (
+        SELECT 
+            user,
+            session,
+            entrant,
+            position,
+            fastest_lap
+        FROM formula_one_prediction_lines
+        WHERE user IS NOT NULL and user != ""
+        AND formula_one_prediction_lines.session = @session_id
+    ),
+    session_results AS (
+        SELECT 
+            entrant,
+            position,
+            fastest_lap
+        FROM formula_one_prediction_lines
+        WHERE user IS NULL or user = ""
+        AND session = @session_id
+    )
+SELECT 
+    up.user AS user_id,
+    u.fullname AS user_name,
+    up.position AS predicted_position,
+    sr.position AS actual_position,
+    d.name AS driver_name,
+    CASE 
+        WHEN up.position <= 10 AND sr.position <= 10 THEN
+            CASE 
+                WHEN up.position = sr.position THEN 4
+                WHEN ABS(up.position - sr.position) = 1 THEN 2
+                ELSE 1
+            END
+        ELSE 0
+    END + 
+    CASE 
+        WHEN s.fastest_lap = 1 
+        AND up.fastest_lap = 1
+        AND sr.fastest_lap = 1
+        AND sr.position <= 10 THEN 1
+        ELSE 0
+    END AS score
+FROM user_predictions up
+JOIN users u ON up.user = u.id
+JOIN session_results sr ON up.entrant = sr.entrant
+JOIN formula_one_entrants fe ON up.entrant = fe.id
+JOIN drivers d ON fe.driver = d.id
+JOIN formula_one_sessions s ON up.session = s.id
+ORDER BY u.fullname, up.position;
