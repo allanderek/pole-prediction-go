@@ -10,6 +10,7 @@ import (
 	"github.com/allanderek/pole-prediction-go/log"
 	"github.com/go-chi/chi/v5"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -311,6 +312,14 @@ type SeasonPredictionRequest struct {
 	TeamOrder []int64 `json:"team_order"`
 }
 
+// FormulaOneScoredSeasonPrediction represents a user's complete season prediction with total score
+type FormulaOneScoredSeasonPrediction struct {
+	UserID   int64
+	UserName string
+	Total    int64
+	Lines    []datastore.GetFormulaOneSeasonLeaderboardRow
+}
+
 // FormulaOneSeasonHandler displays the Formula One season page with constructor standings prediction
 func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -355,12 +364,114 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 		events = []datastore.FormulaOneEventsView{}
 	}
 
+	// Get predictions only if the session has started
+	var allPredictions []FormulaOneScoredSeasonPrediction
+
+	// Check if the session has started before fetching predictions
+	hasStarted := SeasonHasStarted()
+	if hasStarted {
+		// If the season has started, fetch and transform predictions
+		rows, err := app.Queries.GetFormulaOneSeasonLeaderboard(ctx, season)
+		if err != nil {
+			log.Error("Error fetching all user predictions for the season", err)
+		} else {
+			// Transform into grouped predictions
+			allPredictions = TransformSeasonPredictionLines(rows)
+		}
+	} else {
+		// Session hasn't started yet, set predictions to nil
+		allPredictions = nil
+	}
+
 	// Pass the data to the template
-	templ.Handler(FormulaOneSeasonPage(cookieInfo, season, teams, userPrediction, events)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneSeasonPage(cookieInfo, season, teams, userPrediction, events, allPredictions)).ServeHTTP(w, r)
+}
+
+// TransformSeasonPredictionLines transforms flat query results into grouped user predictions
+func TransformSeasonPredictionLines(rows []datastore.GetFormulaOneSeasonLeaderboardRow) []FormulaOneScoredSeasonPrediction {
+	// Map to store predictions by user ID
+	userPredictions := make(map[int64]*FormulaOneScoredSeasonPrediction)
+
+	// Process all rows
+	for _, row := range rows {
+		// Check if we already have a prediction for this user
+		prediction, exists := userPredictions[row.User]
+
+		if !exists {
+			// Create a new prediction for this user
+			prediction = &FormulaOneScoredSeasonPrediction{
+				UserID:   row.User,
+				UserName: row.Fullname,
+				Total:    0,
+				Lines:    []datastore.GetFormulaOneSeasonLeaderboardRow{},
+			}
+			userPredictions[row.User] = prediction
+		}
+
+		// Add the current row to the user's lines
+		prediction.Lines = append(prediction.Lines, row)
+
+		// Calculate difference for the total score
+		// Since Difference could be either float64 or int64, we need to handle both
+		var difference int64
+		switch diff := row.Difference.(type) {
+		case int64:
+			difference = diff
+		case float64:
+			difference = int64(diff)
+		case int:
+			difference = int64(diff)
+		default:
+			difference = 0 // Fallback if it's null or another type
+		}
+
+		// Add to the total difference (lower is better)
+		prediction.Total += difference
+	}
+
+	// Convert map to slice for return
+	result := make([]FormulaOneScoredSeasonPrediction, 0, len(userPredictions))
+	for _, prediction := range userPredictions {
+		result = append(result, *prediction)
+	}
+
+	// Sort by total difference in ascending order (lower is better)
+	sortSeasonPredictionsByScore(result)
+
+	// Sort each user's prediction lines by position
+	for i := range result {
+		sortSeasonPredictionLines(result[i].Lines)
+	}
+
+	return result
+}
+
+// sortSeasonPredictionsByScore sorts predictions by total difference in ascending order
+func sortSeasonPredictionsByScore(predictions []FormulaOneScoredSeasonPrediction) {
+	sort.Slice(predictions, func(i, j int) bool {
+		// Sort by total difference ascending (lower is better)
+		if predictions[i].Total != predictions[j].Total {
+			return predictions[i].Total < predictions[j].Total
+		}
+		// If totals are tied, sort by username
+		return predictions[i].UserName < predictions[j].UserName
+	})
+}
+
+// sortSeasonPredictionLines sorts prediction lines by position
+func sortSeasonPredictionLines(lines []datastore.GetFormulaOneSeasonLeaderboardRow) {
+	sort.Slice(lines, func(i, j int) bool {
+		return lines[i].Position < lines[j].Position
+	})
 }
 
 // FormulaOneSeasonStart is the start time for the Formula One season
 var FormulaOneSeasonStart string = "2025-03-14T01:30:00Z"
+
+func SeasonHasStarted() bool {
+	startTime, err := time.Parse(time.RFC3339, FormulaOneSeasonStart)
+	return err == nil && time.Now().After(startTime)
+}
 
 // SaveFormulaOneSeasonPrediction handles saving a user's prediction for a season's constructor standings
 func (h *CookieAuthHandler) SaveFormulaOneSeasonPrediction(w http.ResponseWriter, r *http.Request) {
@@ -379,8 +490,7 @@ func (h *CookieAuthHandler) SaveFormulaOneSeasonPrediction(w http.ResponseWriter
 		return
 	}
 
-	startTime, err := time.Parse(time.RFC3339, FormulaOneSeasonStart)
-	if err == nil && time.Now().After(startTime) {
+	if SeasonHasStarted() {
 		sendJSONResponse(w, PredictionResponse{
 			Success: false,
 			Message: "Season predictions cannot be submitted after the first practice session of the season has started",

@@ -420,7 +420,7 @@ func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPred
 }
 
 // FormulaOneSeasonPage displays the Formula One season page with constructor standings prediction
-templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, events []datastore.FormulaOneEventsView) {
+templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, events []datastore.FormulaOneEventsView, allPredictions []FormulaOneScoredSeasonPrediction) {
 	@Page(
 		"Formula 1 "+season+" Season Predictions",
 		"Predict the constructor standings for the Formula 1 "+season+" season",
