@@ -152,3 +152,19 @@ join constructors c on t.constructor = c.id
 where t.season = @season
 order by t.fullname
 ;
+
+
+-- name: CreateFormulaOneResultLine :exec
+insert into formula_one_prediction_lines (user, session, position, entrant, fastest_lap) 
+values ("", @session_id, @position, @entrant_id, @fastest_lap)
+on conflict(user,session,position) 
+do update
+set entrant=excluded.entrant, fastest_lap=excluded.fastest_lap
+;
+
+-- name: GetSessionResultEntrantIDsForSession :many
+select r.entrant
+from formula_one_prediction_lines r
+where r.session = @session_id and user = ""
+order by r.position
+;

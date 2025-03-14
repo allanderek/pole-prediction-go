@@ -200,6 +200,112 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}, status int) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// ResultRequest represents the JSON payload from the admin for session results
+type ResultRequest struct {
+	SessionID    int64   `json:"session_id"`
+	EntrantOrder []int64 `json:"entrant_order"`
+}
+
+// SaveFormulaOneResult handles saving admin-entered results for a session
+func (h *CookieAuthHandler) SaveFormulaOneResult(w http.ResponseWriter, r *http.Request) {
+	// Only accept POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Verify admin privileges
+	cookieInfo := h.verifyCookie(r)
+	if !cookieInfo.IsAuthenticated {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "You must be logged in to save results",
+		}, http.StatusUnauthorized)
+		return
+	}
+
+	if !cookieInfo.IsAdmin {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Admin privileges required to save results",
+		}, http.StatusForbidden)
+		return
+	}
+
+	// Parse JSON request
+	var req ResultRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Invalid request format",
+		}, http.StatusBadRequest)
+		return
+	}
+
+	// Validate the request has required fields
+	if req.SessionID == 0 || len(req.EntrantOrder) == 0 {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Missing required fields",
+		}, http.StatusBadRequest)
+		return
+	}
+
+	// Validate all entrant IDs belong to this session
+	err := validateEntrants(r.Context(), req.SessionID, req.EntrantOrder)
+	if err != nil {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: err.Error(),
+		}, http.StatusBadRequest)
+		return
+	}
+
+	// Begin a transaction
+	tx, err := app.DB.Begin()
+	if err != nil {
+		log.Error("Could not begin a transaction", err)
+		http.Error(w, "Could not begin a transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Note we do not need to delete any exising result lines, as the query to create them does an upsert
+
+	// Insert new result lines
+	for position, entrantID := range req.EntrantOrder {
+		// Positions are 1-based in the database
+		positionNum := int64(position + 1)
+
+		// Insert result line
+		err = app.Queries.CreateFormulaOneResultLine(r.Context(), datastore.CreateFormulaOneResultLineParams{
+			SessionID: req.SessionID,
+			Position:  positionNum,
+			EntrantID: entrantID,
+		})
+
+		if err != nil {
+			log.Error("Could not insert result lines", err)
+			http.Error(w, "Could not insert result lines", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		log.Error("Could not commit the db transaction", err)
+		http.Error(w, "Could not commit the db transaction", http.StatusInternalServerError)
+		return
+	}
+
+	// Send success response
+	sendJSONResponse(w, PredictionResponse{
+		Success: true,
+		Message: "Result saved successfully",
+	}, http.StatusOK)
+}
+
 // SeasonPredictionRequest represents the JSON payload from the client for season predictions
 type SeasonPredictionRequest struct {
 	Season    string  `json:"season"`
