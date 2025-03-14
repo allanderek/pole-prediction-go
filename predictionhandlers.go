@@ -271,9 +271,8 @@ func (h *CookieAuthHandler) SaveFormulaOneResult(w http.ResponseWriter, r *http.
 	}
 	defer tx.Rollback()
 
-	// Note we do not need to delete any exising result lines, as the query to create them does an upsert
-
 	// Insert new result lines
+	// Note we do not need to delete any exising result lines, as the query to create them does an upsert
 	for position, entrantID := range req.EntrantOrder {
 		// Positions are 1-based in the database
 		positionNum := int64(position + 1)
