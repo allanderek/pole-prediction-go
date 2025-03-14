@@ -11,6 +11,9 @@ debug.predictions.db
 # Production database
 predictions.db
 
+# Backup dbs
+backup-dbs
+
 # Production binary
 pole-prediction-backend
 
