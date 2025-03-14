@@ -50,6 +50,7 @@ templ FormulaOneEventPage(cookieInfo CookieInfo, eventData FormulaOneEventData) 
 templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSessionWithEntrants, userPrediction []int64, sessionResult []int64, allPredictions []FormulaOneScoredPrediction) {
 	{{ session := sessionData.Session }}
 	{{ hasStarted := HasSessionStarted(session) }}
+	{{ hasResults := len(sessionResult) > 0 }}
 	@Page(
 		fmt.Sprintf("%s - Pole Prediction", session.Name),
 		fmt.Sprintf("Make your prediction for %s", session.Name),
@@ -112,7 +113,7 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 			</div>
 			// Admin result input - only show for admins if session has started
 			if cookieInfo.IsAdmin && hasStarted {
-				if len(sessionResult) > 0 {
+				if hasResults {
 					<div class="bg-white shadow-md rounded-lg p-6 mb-8 border-2 border-purple-500">
 						<h2 class="text-2xl font-bold text-purple-900 mb-6">Session Results (Admin)</h2>
 						@FormulaOneSessionResult(sessionData, sessionResult)
@@ -129,6 +130,60 @@ templ FormulaOneSessionPage(cookieInfo CookieInfo, sessionData FormulaOneSession
 				<h2 class="text-2xl font-bold text-gray-900 mb-6">Your Prediction</h2>
 				@FormulaOneSessionPrediction(sessionData, userPrediction)
 			</div>
+			
+			// Show all predictions if the session has started
+			if hasStarted && len(allPredictions) > 0 {
+				<div class="bg-white shadow-md rounded-lg p-6 mt-8">
+					<h2 class="text-2xl font-bold text-gray-900 mb-6">All Predictions</h2>
+					<div class="space-y-4">
+						for i, prediction := range allPredictions {
+							{{ isTopTen := i < 10 }}
+							<details class={ templ.KV("border rounded-lg p-4", true), templ.KV("border-yellow-400 bg-yellow-50", isTopTen), templ.KV("border-gray-200", !isTopTen) }>
+								<summary class="flex justify-between items-center font-medium cursor-pointer">
+									<span class={ templ.KV("font-bold", isTopTen) }>
+										{ prediction.UserName }
+									</span>
+									if hasResults {
+										<span class={ templ.KV("text-lg font-bold text-green-700", isTopTen), templ.KV("text-green-600", !isTopTen) }>
+											{ fmt.Sprintf("%d points", prediction.Total) }
+										</span>
+									}
+								</summary>
+								<div class="mt-4 pl-4">
+									<table class="min-w-full border-collapse">
+										<thead>
+											<tr>
+												<th class="text-left py-2 px-3 bg-gray-50">Position</th>
+												<th class="text-left py-2 px-3 bg-gray-50">Driver</th>
+												if hasResults {
+													<th class="text-left py-2 px-3 bg-gray-50">Actual Position</th>
+													<th class="text-left py-2 px-3 bg-gray-50">Score</th>
+												}
+											</tr>
+										</thead>
+										<tbody>
+											for _, line := range prediction.Lines {
+												<tr class="border-b">
+													<td class="py-2 px-3">{ fmt.Sprintf("%d", line.PredictedPosition) }</td>
+													<td class="py-2 px-3">{ line.DriverName }</td>
+													if hasResults {
+														<td class="py-2 px-3">{ fmt.Sprintf("%d", line.ActualPosition) }</td>
+														<td class="py-2 px-3 font-medium">
+															<span class={ templ.KV("text-green-600", line.Score > 0), templ.KV("text-gray-500", line.Score == 0) }>
+																{ fmt.Sprintf("%d", line.Score) }
+															</span>
+														</td>
+													}
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</details>
+						}
+					</div>
+				</div>
+			}
 		</div>
 	}
 }
