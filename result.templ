@@ -1,0 +1,357 @@
+package main
+
+import (
+	"encoding/json"
+	"github.com/allanderek/pole-prediction-go/datastore"
+)
+
+// FormulaOneSessionResult renders a result entry component for a Formula One session (admin only)
+templ FormulaOneSessionResult(sessionData FormulaOneSessionWithEntrants, sessionResult []int64) {
+	// Prepare the data for JavaScript
+	<div id="result-component" class="w-full max-w-3xl mx-auto bg-white rounded-lg p-4 sm:p-6 border-2 border-purple-500" data-session={ generateSessionResultDataJSON(sessionData, sessionResult) }>
+		<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+			<h3 class="text-xl font-bold mb-2 sm:mb-0 text-purple-900">Results for <span id="result-session-name"></span></h3>
+			<div id="result-status-container" class="text-left sm:text-right"></div>
+		</div>
+		<div id="mobile-instructions" class="hidden mb-4 p-3 bg-purple-100 text-purple-800 rounded-md border border-purple-200">
+			<p class="text-sm">Touch and hold an item, then drag to reorder the session results. You can also use the up/down buttons to adjust positions.</p>
+		</div>
+		<div id="result-entrants-list" class="space-y-2"></div>
+		<div class="mt-6 text-right">
+			<button id="save-result" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition text-base">
+				Save Session Results
+			</button>
+		</div>
+	</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+	<script>
+		// This function will be called when the DOM is loaded
+		document.addEventListener('DOMContentLoaded', function() {
+			// Check if we're on a mobile device and show instructions
+			const resultComponentElement = document.getElementById('result-component');
+			if (!resultComponentElement) return; // Exit if component not found
+			
+			if (isMobileDevice()) {
+				const mobileInstructions = resultComponentElement.querySelector('#mobile-instructions');
+				if (mobileInstructions) {
+					mobileInstructions.classList.remove('hidden');
+				}
+			}
+			
+			// Get session data from the data attribute (populated by Go template)
+			const sessionData = JSON.parse(resultComponentElement.getAttribute('data-session'));
+			const entrants = sessionData.entrants;
+			const sessionId = sessionData.session.ID;
+			const sessionName = sessionData.session.Name;
+			
+			// Update session name
+			const sessionNameElement = document.getElementById('result-session-name');
+			if (sessionNameElement) {
+				sessionNameElement.textContent = sessionName;
+			}
+			
+			// Render entrants list with distinct styling for results
+			const entrantsList = document.getElementById('result-entrants-list');
+			if (!entrantsList) return;
+			
+			// Render entrants as draggable items
+			renderResultEntrants(entrants, entrantsList);
+			
+			// Set up sortable.js for drag and drop (touch-friendly)
+			setupResultSortable(entrantsList);
+			
+			// Handle save button
+			const saveButton = document.getElementById('save-result');
+			if (saveButton) {
+				saveButton.addEventListener('click', function() {
+					// Get current order of entrants
+					const entrantItems = entrantsList.querySelectorAll('.result-entrant-item');
+					const orderedIds = Array.from(entrantItems).map(item => 
+						parseInt(item.getAttribute('data-entrant-id'))
+					);
+					
+					// Send to server
+					saveResult(sessionId, orderedIds);
+				});
+			}
+		});
+		
+		function isMobileDevice() {
+			return (window.innerWidth <= 768) || 
+				   ('ontouchstart' in window) || 
+				   (navigator.maxTouchPoints > 0) || 
+				   (navigator.msMaxTouchPoints > 0);
+		}
+		
+		function renderResultEntrants(entrants, container) {
+			container.innerHTML = '';
+			
+			entrants.forEach((entrant, index) => {
+				const position = index + 1;
+				const item = document.createElement('div');
+				const isTopTen = position <= 10;
+				
+				// Apply different styling for result entrants
+				item.className = 'result-entrant-item flex items-center p-3 sm:p-4 bg-purple-50 border border-purple-200 rounded-md shadow-sm';
+				
+				// Add top-ten class for styling differences
+				if (!isTopTen) {
+					item.classList.add('non-points-position');
+					item.style.opacity = '0.75';
+				}
+				
+				// Add divider before position 11
+				if (position === 11) {
+					const divider = document.createElement('div');
+					divider.className = 'border-t border-purple-300 my-3 relative';
+					divider.innerHTML = '<span class="absolute top-0 left-0 transform -translate-y-1/2 bg-white px-2 text-xs text-purple-500">Points line</span>';
+					container.appendChild(divider);
+				}
+				
+				item.setAttribute('data-entrant-id', entrant.ID);
+				item.setAttribute('data-position', position);
+				
+				const teamColor = entrant.TeamColor || '#000000';
+				
+				// Add up/down buttons for mobile
+				const moveUpButton = position === 1 ? 
+					'<button disabled class="move-up-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬆️</button>' : 
+					'<button class="move-up-btn text-purple-500 w-8 h-8 flex items-center justify-center rounded hover:bg-purple-100">⬆️</button>';
+				
+				const moveDownButton = position === entrants.length ? 
+					'<button disabled class="move-down-btn text-gray-300 w-8 h-8 flex items-center justify-center rounded disabled:cursor-not-allowed">⬇️</button>' : 
+					'<button class="move-down-btn text-purple-500 w-8 h-8 flex items-center justify-center rounded hover:bg-purple-100">⬇️</button>';
+				
+				item.innerHTML = `
+					<div class="font-bold mr-4 w-6 text-center text-purple-900">${position}</div>
+					<div class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 mr-4 font-semibold">${entrant.Number}</div>
+					<div class="flex-1">
+						<div class="font-semibold">${entrant.DriverName}</div>
+						<div style="color: ${teamColor};">${entrant.TeamShortname}</div>
+					</div>
+					<div class="flex items-center">
+						${moveUpButton}
+						${moveDownButton}
+						<div class="flex items-center justify-center w-10 h-10 rounded-md text-purple-500 cursor-move touch-manipulation">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+							</svg>
+						</div>
+					</div>
+				`;
+				
+				container.appendChild(item);
+				
+				// Add event listeners for up/down buttons
+				const upButton = item.querySelector('.move-up-btn');
+				const downButton = item.querySelector('.move-down-btn');
+				
+				if (upButton) {
+					upButton.addEventListener('click', function() {
+						moveResultEntrantUp(item, container);
+					});
+				}
+				
+				if (downButton) {
+					downButton.addEventListener('click', function() {
+						moveResultEntrantDown(item, container);
+					});
+				}
+			});
+		}
+		
+		function setupResultSortable(container) {
+			new Sortable(container, {
+				animation: 150,
+				handle: '.cursor-move',
+				ghostClass: 'bg-purple-100',
+				chosenClass: 'bg-purple-50',
+				dragClass: 'shadow-lg',
+				onEnd: function() {
+					// Update position numbers and styles after drag
+					updateResultPositionsAndStyles(container);
+				}
+			});
+		}
+		
+		function moveResultEntrantUp(item, container) {
+			const prevItem = item.previousElementSibling;
+			if (prevItem) {
+				// Skip the divider if it's a border-t element (points line)
+				if (prevItem.classList.contains('border-t')) {
+					const prevPrevItem = prevItem.previousElementSibling;
+					if (prevPrevItem) {
+						container.insertBefore(item, prevPrevItem);
+					}
+				} else {
+					container.insertBefore(item, prevItem);
+				}
+				updateResultPositionsAndStyles(container);
+			}
+		}
+		
+		function moveResultEntrantDown(item, container) {
+			const nextItem = item.nextElementSibling;
+			if (nextItem) {
+				// Skip the divider if it's a border-t element (points line)
+				if (nextItem.classList.contains('border-t')) {
+					const nextNextItem = nextItem.nextElementSibling;
+					if (nextNextItem) {
+						container.insertBefore(nextNextItem, item);
+					}
+				} else {
+					container.insertBefore(nextItem, item);
+				}
+				updateResultPositionsAndStyles(container);
+			}
+		}
+		
+		function updateResultPositionsAndStyles(container) {
+			// Get all entrant items
+			const items = container.querySelectorAll('.result-entrant-item');
+			let pointsLinePresent = false;
+			
+			// Check if the points line divider exists and remove it
+			const existingDivider = container.querySelector('.border-t.border-purple-300.my-3.relative');
+			if (existingDivider) {
+				container.removeChild(existingDivider);
+			}
+			
+			// Update positions and styles
+			items.forEach((item, index) => {
+				const position = index + 1;
+				const positionElement = item.querySelector('div:first-child');
+				
+				// Update position number
+				positionElement.textContent = position;
+				item.setAttribute('data-position', position);
+				
+				// Update top-ten styling
+				if (position <= 10) {
+					item.classList.remove('non-points-position');
+					item.style.opacity = '1';
+				} else {
+					item.classList.add('non-points-position');
+					item.style.opacity = '0.75';
+					
+					// Add points divider before position 11
+					if (position === 11 && !pointsLinePresent) {
+						const divider = document.createElement('div');
+						divider.className = 'border-t border-purple-300 my-3 relative';
+						divider.innerHTML = '<span class="absolute top-0 left-0 transform -translate-y-1/2 bg-white px-2 text-xs text-purple-500">Points line</span>';
+						container.insertBefore(divider, item);
+						pointsLinePresent = true;
+					}
+				}
+				
+				// Update up/down buttons states
+				const upButton = item.querySelector('.move-up-btn');
+				const downButton = item.querySelector('.move-down-btn');
+				
+				if (position === 1) {
+					upButton.disabled = true;
+					upButton.classList.add('text-gray-300');
+					upButton.classList.remove('text-purple-500', 'hover:bg-purple-100');
+				} else {
+					upButton.disabled = false;
+					upButton.classList.remove('text-gray-300');
+					upButton.classList.add('text-purple-500', 'hover:bg-purple-100');
+				}
+				
+				if (position === items.length) {
+					downButton.disabled = true;
+					downButton.classList.add('text-gray-300');
+					downButton.classList.remove('text-purple-500', 'hover:bg-purple-100');
+				} else {
+					downButton.disabled = false;
+					downButton.classList.remove('text-gray-300');
+					downButton.classList.add('text-purple-500', 'hover:bg-purple-100');
+				}
+			});
+		}
+		
+		function saveResult(sessionId, orderedIds) {
+			// Create fetch request to save the result
+			fetch('/formulaone/result/save', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					session_id: sessionId,
+					entrant_order: orderedIds
+				})
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Network response was not ok');
+				}
+				return response.json();
+			})
+			.then(data => {
+				if (data.success) {
+					alert('Session results saved successfully!');
+				} else {
+					alert('Error: ' + (data.message || 'Failed to save results.'));
+				}
+			})
+			.catch(error => {
+				console.error('Error saving results:', error);
+				alert('Failed to save results. Please try again.');
+			});
+		}
+	</script>
+}
+
+// SessionResultData holds all the data needed for the result component
+type SessionResultData struct {
+	Session  datastore.FormulaOneSession                   `json:"session"`
+	Entrants []datastore.GetFormulaOneEntrantsBySessionRow `json:"entrants"`
+}
+
+// Helper function to generate the JSON data attribute for results
+func generateSessionResultDataJSON(sessionData FormulaOneSessionWithEntrants, sessionResult []int64) string {
+	// Create a copy of entrants that we can sort
+	sortedEntrants := make([]datastore.GetFormulaOneEntrantsBySessionRow, len(sessionData.Entrants))
+	copy(sortedEntrants, sessionData.Entrants)
+
+	// If there's an existing result, use that order
+	if len(sessionResult) > 0 {
+		// Create a map for entrant lookup by ID
+		entrantMap := make(map[int64]datastore.GetFormulaOneEntrantsBySessionRow)
+		for _, entrant := range sessionData.Entrants {
+			entrantMap[entrant.ID] = entrant
+		}
+
+		// Create a set of result entrant IDs to identify missing entrants later
+		resultEntrantIDs := make(map[int64]bool)
+
+		// First, add entrants according to result order
+		sortedEntrants = nil // Clear the sorted entrants slice
+		for _, entrantID := range sessionResult {
+			if entrant, exists := entrantMap[entrantID]; exists {
+				sortedEntrants = append(sortedEntrants, entrant)
+				resultEntrantIDs[entrantID] = true
+			}
+		}
+
+		// Then add any entrants that weren't in the result
+		for _, entrant := range sessionData.Entrants {
+			if !resultEntrantIDs[entrant.ID] {
+				sortedEntrants = append(sortedEntrants, entrant)
+			}
+		}
+	}
+
+	data := SessionResultData{
+		Session:  sessionData.Session,
+		Entrants: sortedEntrants,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(jsonData)
+}

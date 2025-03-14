@@ -98,6 +98,17 @@ func (h *CookieAuthHandler) FormulaOneEventHandler(w http.ResponseWriter, r *htt
 	templ.Handler(FormulaOneEventPage(cookieInfo, eventData)).ServeHTTP(w, r)
 }
 
+// HasSessionStarted checks if a session has already started
+func HasSessionStarted(session datastore.FormulaOneSession) bool {
+	if session.StartTime.Valid {
+		startTime, err := time.Parse(time.RFC3339, session.StartTime.String)
+		if err == nil && time.Now().After(startTime) {
+			return true
+		}
+	}
+	return false
+}
+
 // FormulaOneSessionHandler handles displaying a single Formula One session with prediction component
 func (h *CookieAuthHandler) FormulaOneSessionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -146,8 +157,12 @@ func (h *CookieAuthHandler) FormulaOneSessionHandler(w http.ResponseWriter, r *h
 		}
 	}
 
+	// Get session results if they exist
+	var sessionResult []int64
+	sessionResult, _ = app.Queries.GetSessionResultEntrantIDsForSession(ctx, sessionID)
+
 	// Pass the session data to the SessionPage template
-	templ.Handler(FormulaOneSessionPage(cookieInfo, sessionData, userPrediction)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneSessionPage(cookieInfo, sessionData, userPrediction, sessionResult)).ServeHTTP(w, r)
 }
 
 // ProfileHandler handles displaying the user's profile
