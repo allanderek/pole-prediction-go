@@ -2,6 +2,9 @@
 *_templ.go
 *_templ.txt
 
+# static generated files
+static/styles.css
+
 # Generated sqlc files
 datastore
 
@@ -41,3 +44,6 @@ db/schema.sql
 
 
 .aider*
+
+# Node stuff
+node_modules
