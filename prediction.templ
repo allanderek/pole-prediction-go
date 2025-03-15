@@ -421,7 +421,7 @@ func generateSessionDataJSON(sessionData FormulaOneSessionWithEntrants, userPred
 }
 
 // FormulaOneSeasonPage displays the Formula One season page with constructor standings prediction
-templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, events []datastore.FormulaOneEventsView, allPredictions []FormulaOneScoredSeasonPrediction) {
+templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datastore.GetTeamsByFormulaOneSeasonRow, userPrediction []datastore.GetFormulaOneSeasonPredictionRow, events []datastore.FormulaOneEventsView, allPredictions []FormulaOneScoredSeasonPrediction, leaderboard []datastore.GetFormulaOneLeaderboardRow) {
 	@Page(
 		"Formula 1 "+season+" Season Predictions",
 		"Predict the constructor standings for the Formula 1 "+season+" season",
@@ -805,6 +805,103 @@ templ FormulaOneSeasonPage(cookieInfo CookieInfo, season string, teams []datasto
 					</div>
 				</div>
 			}
+			if len(leaderboard) > 0 {
+				@FormulaOneLeaderboard(leaderboard)
+			}
+		</div>
+	}
+}
+
+// Helper function to add highlighting class
+func highlightIfHighest(value int64, highest int64) string {
+	if value == highest && value > 0 {
+		return "border-b-2 border-blue-500"
+	}
+	return ""
+}
+
+// HighestValues holds the highest score for each category
+type HighestValues struct {
+	SprintShootout int64
+	Sprint         int64
+	Qualifying     int64
+	Race           int64
+	Total          int64
+}
+
+// calculateHighestValues finds the highest score in each category
+func calculateHighestValues(leaderboard []datastore.GetFormulaOneLeaderboardRow) HighestValues {
+	highest := HighestValues{
+		SprintShootout: 0,
+		Sprint:         0,
+		Qualifying:     0,
+		Race:           0,
+		Total:          0,
+	}
+
+	for _, row := range leaderboard {
+		if row.SprintShootout > highest.SprintShootout {
+			highest.SprintShootout = row.SprintShootout
+		}
+		if row.Sprint > highest.Sprint {
+			highest.Sprint = row.Sprint
+		}
+		if row.Qualifying > highest.Qualifying {
+			highest.Qualifying = row.Qualifying
+		}
+		if row.Race > highest.Race {
+			highest.Race = row.Race
+		}
+		if row.Total > highest.Total {
+			highest.Total = row.Total
+		}
+	}
+
+	return highest
+}
+
+templ FormulaOneLeaderboard(leaderboard []datastore.GetFormulaOneLeaderboardRow) {
+	// Calculate the highest values
+	{{ highest := calculateHighestValues(leaderboard) }}
+	if len(leaderboard) > 0 {
+		<div class="bg-white shadow-md rounded-lg p-6 mt-8">
+			<h2 class="text-2xl font-bold text-gray-900 mb-6">Formula One Leaderboard</h2>
+			<div class="overflow-x-auto">
+				<table class="min-w-full border-collapse">
+					<thead>
+						<tr class="border-b-2 border-gray-200 bg-gray-50">
+							<th class="text-left py-3 px-4 font-semibold text-gray-700">Driver</th>
+							<th class="text-center py-3 px-4 font-semibold text-gray-700">Sprint Shootout</th>
+							<th class="text-center py-3 px-4 font-semibold text-gray-700">Sprint</th>
+							<th class="text-center py-3 px-4 font-semibold text-gray-700">Qualifying</th>
+							<th class="text-center py-3 px-4 font-semibold text-gray-700">Race</th>
+							<th class="text-center py-3 px-4 font-semibold text-yellow-600">Total</th>
+						</tr>
+					</thead>
+					<tbody>
+						for i, row := range leaderboard {
+							<tr class={ templ.KV("bg-gray-50", i%2 == 0), "border-b" }>
+								<td class="py-3 px-4 font-medium text-gray-900">{ row.UserFullname }</td>
+								<td class={ "py-3 px-4 text-center", templ.SafeClass(highlightIfHighest(row.SprintShootout, highest.SprintShootout)) }>
+									{ fmt.Sprintf("%d", row.SprintShootout) }
+								</td>
+								<td class={ "py-3 px-4 text-center", templ.SafeClass(highlightIfHighest(row.Sprint, highest.Sprint)) }>
+									{ fmt.Sprintf("%d", row.Sprint) }
+								</td>
+								<td class={ "py-3 px-4 text-center", templ.SafeClass(highlightIfHighest(row.Qualifying, highest.Qualifying)) }>
+									{ fmt.Sprintf("%d", row.Qualifying) }
+								</td>
+								<td class={ "py-3 px-4 text-center", templ.SafeClass(highlightIfHighest(row.Race, highest.Race)) }>
+									{ fmt.Sprintf("%d", row.Race) }
+								</td>
+								<td class={ "py-3 px-4 text-center font-bold text-green-700", templ.SafeClass(highlightIfHighest(row.Total, highest.Total)) }>
+									{ fmt.Sprintf("%d", row.Total) }
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	}
 }

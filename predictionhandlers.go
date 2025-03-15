@@ -366,6 +366,7 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 
 	// Get predictions only if the session has started
 	var allPredictions []FormulaOneScoredSeasonPrediction
+	var leaderboard []datastore.GetFormulaOneLeaderboardRow
 
 	// Check if the session has started before fetching predictions
 	hasStarted := SeasonHasStarted()
@@ -374,17 +375,26 @@ func (h *CookieAuthHandler) FormulaOneSeasonHandler(w http.ResponseWriter, r *ht
 		rows, err := app.Queries.GetFormulaOneSeasonLeaderboard(ctx, season)
 		if err != nil {
 			log.Error("Error fetching all user predictions for the season", err)
+			allPredictions = nil
 		} else {
 			// Transform into grouped predictions
 			allPredictions = TransformSeasonPredictionLines(rows)
 		}
+
+		leaderboard, err = app.Queries.GetFormulaOneLeaderboard(ctx, season)
+		if err != nil {
+			log.Error("Error fetching leaderboard for the season", err)
+			leaderboard = nil
+		}
+
 	} else {
 		// Session hasn't started yet, set predictions to nil
 		allPredictions = nil
+		leaderboard = nil
 	}
 
 	// Pass the data to the template
-	templ.Handler(FormulaOneSeasonPage(cookieInfo, season, teams, userPrediction, events, allPredictions)).ServeHTTP(w, r)
+	templ.Handler(FormulaOneSeasonPage(cookieInfo, season, teams, userPrediction, events, allPredictions, leaderboard)).ServeHTTP(w, r)
 }
 
 // TransformSeasonPredictionLines transforms flat query results into grouped user predictions
