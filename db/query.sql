@@ -242,7 +242,7 @@ with
     ),
     -- Only calculate constructor standings if results exist
     results as (
-        select * from formula_one_prediction_lines where user is null and session in (
+        select * from formula_one_prediction_lines where (user is null or user = "") and session in (
             select id from formula_one_sessions where event in (
                 select id from formula_one_events where season = @season
             )
