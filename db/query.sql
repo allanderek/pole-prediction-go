@@ -379,3 +379,10 @@ group by user_id
 order by total desc
 ;
 
+
+-- name: GetFormulaERaces :many
+select id, round, name, country, circuit, date 
+from races 
+where season = @season and cancelled = 0
+;
+

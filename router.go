@@ -34,5 +34,8 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 	r.Post("/formulaone/season-prediction/save", authHandler.SaveFormulaOneSeasonPrediction)
 	r.Post("/formulaone/result/save", authHandler.SaveFormulaOneResult)
 
+	// Formula E routes
+	r.Get("/fe/{season}", authHandler.FormulaESeasonHandler)
+
 	return r
 }

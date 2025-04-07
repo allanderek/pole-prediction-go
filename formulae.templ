@@ -1,0 +1,42 @@
+package main
+
+import (
+	"github.com/allanderek/pole-prediction-go/datastore"
+	"strconv"
+)
+
+templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastore.GetFormulaERacesRow) {
+	@Page(
+		"Formula E "+season,
+		"Races in the Formula E "+season+" season",
+		templ.URL("/fe/"+season),
+		cookieInfo,
+	) {
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Season Events Sidebar -->
+				<div class="col-span-1">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+						<h2 class="text-xl font-bold text-gray-900 mb-4">F1 { season } Events</h2>
+						if len(events) > 0 {
+							<ul class="space-y-2">
+								for _, event := range events {
+									<li>
+										<a href={ templ.URL("/formulae/event/" + strconv.FormatInt(event.ID, 10)) } class="flex items-center p-2 hover:bg-gray-50 rounded-md transition">
+											<span class="text-gray-700 font-medium">Round { strconv.FormatInt(event.Round, 10) }</span>
+											<span class="ml-3 text-gray-900">
+												{ event.Name }
+											</span>
+										</a>
+									</li>
+								}
+							</ul>
+						} else {
+							<p class="text-gray-500 italic">No events available for this season yet.</p>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

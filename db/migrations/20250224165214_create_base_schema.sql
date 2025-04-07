@@ -31,13 +31,13 @@ CREATE TABLE teams (
 );
 CREATE TABLE races (
     id integer primary key autoincrement, 
-    round integer,
-    name text, 
-    country text, 
-    circuit text, 
-    date text,
+    round integer not null,
+    name text not null, 
+    country text not null, 
+    circuit text not null, 
+    date text not null,
     season text not null,
-    cancelled integer default 0,
+    cancelled integer not null default 0,
     foreign key (season) references seasons (year)
 );
 CREATE TABLE entrants ( 

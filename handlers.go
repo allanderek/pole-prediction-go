@@ -20,6 +20,7 @@ import (
 )
 
 const currentSeason = "2025"
+const currentFormulaESeason = "2024-25"
 
 func (h *CookieAuthHandler) homeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -524,4 +525,24 @@ func (h *CookieAuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Reque
 func (h *CookieAuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	h.clearAuthCookie(w)
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+func (h *CookieAuthHandler) FormulaESeasonHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cookieInfo := h.verifyCookie(r)
+
+	season := chi.URLParam(r, "season")
+	if season == "" {
+		season = currentFormulaESeason
+	}
+	// Get Formula E races for the season for navigation
+	events, err := app.Queries.GetFormulaERaces(ctx, season)
+	if err != nil {
+		log.Error("Could not retrieve events for season", err)
+		// Don't return an error here, just continue with empty events
+		events = []datastore.GetFormulaERacesRow{}
+	}
+
+	templ.Handler(FormulaESeasonPage(cookieInfo, season, events)).ServeHTTP(w, r)
+
 }
