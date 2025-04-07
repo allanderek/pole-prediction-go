@@ -228,8 +228,7 @@ templ Header(cookieInfo CookieInfo, currentURI templ.SafeURL) {
 	</header>
 }
 
-// FormatTimeInLondon formats a timestamp as a human-readable date and time in Europe/London timezone
-func FormatTimeInLondon(timestamp string) (string, error) {
+func formatDateTimeInLondon(timestamp, format string) (string, error) {
 	if timestamp == "" {
 		return "TBD", nil
 	}
@@ -254,12 +253,30 @@ func FormatTimeInLondon(timestamp string) (string, error) {
 	londonTime := t.In(loc)
 
 	// Format as human readable
-	return londonTime.Format("Mon, 02 Jan, 15:04 MST"), nil
+	return londonTime.Format(format), nil
+}
+
+// FormatTimeInLondon formats a timestamp as a human-readable date and time in Europe/London timezone
+func FormatDateInLondon(timestamp string) (string, error) {
+	return formatDateTimeInLondon(timestamp, "Mon, 02 Jan")
+}
+
+// FormatTimeInLondon formats a timestamp as a human-readable date and time in Europe/London timezone
+func FormatTimeInLondon(timestamp string) (string, error) {
+	return formatDateTimeInLondon(timestamp, "Mon, 02 Jan, 15:04 MST")
 }
 
 // FormatLondonTime is a templ helper function to format timestamps in London timezone
 templ FormatLondonTime(timestamp string) {
 	if formatted, err := FormatTimeInLondon(timestamp); err == nil {
+		{ formatted }
+	} else {
+		{ timestamp }
+	}
+}
+
+templ FormatLondonDate(timestamp string) {
+	if formatted, err := FormatDateInLondon(timestamp); err == nil {
 		{ formatted }
 	} else {
 		{ timestamp }
