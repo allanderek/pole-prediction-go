@@ -546,3 +546,25 @@ func (h *CookieAuthHandler) FormulaESeasonHandler(w http.ResponseWriter, r *http
 	templ.Handler(FormulaESeasonPage(cookieInfo, season, events)).ServeHTTP(w, r)
 
 }
+func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cookieInfo := h.verifyCookie(r)
+
+	raceIdString := chi.URLParam(r, "race-id")
+	raceId, err := strconv.ParseInt(raceIdString, 10, 64)
+	if err != nil {
+		log.Error("Invalid race ID format", err)
+		http.Error(w, "Race not found", http.StatusNotFound)
+		return
+	}
+
+	// Get Formula E races for the season for navigation
+	entrants, err := app.Queries.GetFormulaERaceEntrants(ctx, raceId)
+	if err != nil {
+		log.Error("Could not retrieve the entrants for the race", err)
+		http.Error(w, "Could not retrieve the entrants for the race", http.StatusInternalServerError)
+		return
+	}
+
+	templ.Handler(FormulaERacePage(cookieInfo, raceIdString, entrants)).ServeHTTP(w, r)
+}

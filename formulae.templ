@@ -33,7 +33,7 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 											<td class="py-3 pr-2 text-sm text-gray-400">{ strconv.FormatInt(event.Round, 10) }</td>
 											<td class="py-3 px-2">
 												<a
-													href={ templ.URL("/formulaone/event/" + strconv.FormatInt(event.ID, 10)) }
+													href={ templ.URL("/formulae/race/" + strconv.FormatInt(event.ID, 10)) }
 													class="font-medium text-indigo-600 hover:text-indigo-800 transition-colors duration-150 flex items-center"
 												>
 													<span class="mr-1">{ event.Name }</span>
@@ -53,5 +53,16 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 				</div>
 			</div>
 		</div>
+	}
+}
+
+templ FormulaERacePage(cookieInfo CookieInfo, raceId string, entrants []datastore.GetFormulaERaceEntrantsRow) {
+	@Page(
+		"Formula E ",
+		"Formula E race",
+		templ.URL("/fe/race/"+raceId),
+		cookieInfo,
+	) {
+		I don't yet have a page for a race.
 	}
 }

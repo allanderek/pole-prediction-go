@@ -386,3 +386,11 @@ from races
 where season = @season and cancelled = 0
 ;
 
+-- name: GetFormulaERaceEntrants :many
+select entrants.id, d.name, t.shortname 
+from entrants 
+inner join drivers d on entrants.driver = d.id 
+inner join teams t on entrants.team = t.id
+where race = @race and entrants.participating = 1
+;
+

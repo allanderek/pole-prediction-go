@@ -36,6 +36,7 @@ func router(authHandler *CookieAuthHandler) *chi.Mux {
 
 	// Formula E routes
 	r.Get("/fe/{season}", authHandler.FormulaESeasonHandler)
+	r.Get("/formulae/race/{race-id}", authHandler.FormulaEEventHandler)
 
 	return r
 }
