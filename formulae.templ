@@ -92,7 +92,7 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 	}
 }
 
-templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow, entrants []datastore.GetFormulaERaceEntrantsRow, raceHasStarted bool, scores []datastore.GetFormulaERaceScoresRow) {
+templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow, entrants []datastore.GetFormulaERaceEntrantsRow, raceHasStarted bool, scores []datastore.GetFormulaERaceScoresRow, userPrediction *datastore.GetFormulaERaceUserPredictionRow, raceResult *datastore.GetFormulaERaceResultRow) {
 	@Page(
 		"Formula E "+race.Name,
 		"Formula E race - "+race.Name,
@@ -211,7 +211,7 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 								<form id="predictionForm" class="space-y-4">
 									<input type="hidden" id="prediction_race" name="race" value={ strconv.FormatInt(race.ID, 10) }/>
 									<input type="hidden" id="prediction_type" name="type" value="prediction"/>
-									@FormulaEPredictionFields(entrants, "prediction")
+									@FormulaEPredictionFields(entrants, "prediction", userPredictionPole(userPrediction), userPredictionFam(userPrediction), userPredictionFl(userPrediction), userPredictionHgc(userPrediction), userPredictionFirst(userPrediction), userPredictionSecond(userPrediction), userPredictionThird(userPrediction), userPredictionFdnf(userPrediction), userPredictionSafetyCar(userPrediction))
 									<div class="pt-4">
 										<button type="button" id="savePredictionButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
 											Save Predictions
@@ -227,9 +227,9 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 									<form id="resultForm" class="space-y-4">
 										<input type="hidden" id="result_race" name="race" value={ strconv.FormatInt(race.ID, 10) }/>
 										<input type="hidden" id="result_type" name="type" value="result"/>
-										@FormulaEPredictionFields(entrants, "result")
+										@FormulaEPredictionFields(entrants, "result", raceResultPole(raceResult), raceResultFam(raceResult), raceResultFl(raceResult), raceResultHgc(raceResult), raceResultFirst(raceResult), raceResultSecond(raceResult), raceResultThird(raceResult), raceResultFdnf(raceResult), raceResultSafetyCar(raceResult))
 										<div class="pt-4">
-											<button type="button" id="saveResultButton" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+											<button type="button" id="saveResultButton" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
 												Save Results
 											</button>
 										</div>
@@ -390,8 +390,135 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 	}
 }
 
+// Helper functions to safely extract values from pointers
+func userPredictionPole(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Pole
+	}
+	return 0
+}
+
+func userPredictionFam(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Fam
+	}
+	return 0
+}
+
+func userPredictionFl(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Fl
+	}
+	return 0
+}
+
+func userPredictionHgc(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Hgc
+	}
+	return 0
+}
+
+func userPredictionFirst(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.First
+	}
+	return 0
+}
+
+func userPredictionSecond(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Second
+	}
+	return 0
+}
+
+func userPredictionThird(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Third
+	}
+	return 0
+}
+
+func userPredictionFdnf(p *datastore.GetFormulaERaceUserPredictionRow) int64 {
+	if p != nil {
+		return p.Fdnf
+	}
+	return 0
+}
+
+func userPredictionSafetyCar(p *datastore.GetFormulaERaceUserPredictionRow) string {
+	if p != nil {
+		return p.SafetyCar
+	}
+	return ""
+}
+
+func raceResultPole(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Pole
+	}
+	return 0
+}
+
+func raceResultFam(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Fam
+	}
+	return 0
+}
+
+func raceResultFl(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Fl
+	}
+	return 0
+}
+
+func raceResultHgc(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Hgc
+	}
+	return 0
+}
+
+func raceResultFirst(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.First
+	}
+	return 0
+}
+
+func raceResultSecond(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Second
+	}
+	return 0
+}
+
+func raceResultThird(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Third
+	}
+	return 0
+}
+
+func raceResultFdnf(r *datastore.GetFormulaERaceResultRow) int64 {
+	if r != nil {
+		return r.Fdnf
+	}
+	return 0
+}
+
+func raceResultSafetyCar(r *datastore.GetFormulaERaceResultRow) string {
+	if r != nil {
+		return r.SafetyCar
+	}
+	return ""
+}
+
 // FormulaEPredictionFields renders the common prediction/result fields for Formula E races
-templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, formType string) {
+templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, formType string, pole int64, fam int64, fl int64, hgc int64, first int64, second int64, third int64, fdnf int64, safetyCar string) {
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<!-- Pole Position -->
 		<div>
@@ -399,7 +526,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_pole" } name="pole" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == pole }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -409,7 +536,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_fam" } name="fam" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == fam }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -419,7 +546,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_fl" } name="fl" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == fl }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -429,7 +556,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_hgc" } name="hgc" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == hgc }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -441,7 +568,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_first" } name="first" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == first }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -451,7 +578,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_second" } name="second" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == second }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -461,7 +588,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_third" } name="third" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == third }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -473,7 +600,7 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<select id={ formType + "_fdnf" } name="fdnf" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
 				<option value="">-- Select Driver --</option>
 				for _, entrant := range entrants {
-					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+					<option value={ strconv.FormatInt(entrant.ID, 10) } selected?={ entrant.ID == fdnf }>{ entrant.Name } ({ entrant.Shortname })</option>
 				}
 			</select>
 		</div>
@@ -482,11 +609,11 @@ templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, 
 			<label for={ formType + "_safety_car" } class="block text-sm font-medium text-gray-700 mb-1">Safety Car?</label>
 			<div class="flex items-center space-x-4 mt-2">
 				<div class="flex items-center">
-					<input id={ formType + "_safety_car_yes" } name="safety_car" type="radio" value="yes" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
+					<input id={ formType + "_safety_car_yes" } name="safety_car" type="radio" value="yes" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" checked?={ safetyCar == "yes" }/>
 					<label for={ formType + "_safety_car_yes" } class="ml-2 block text-sm text-gray-700">Yes</label>
 				</div>
 				<div class="flex items-center">
-					<input id={ formType + "_safety_car_no" } name="safety_car" type="radio" value="no" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
+					<input id={ formType + "_safety_car_no" } name="safety_car" type="radio" value="no" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" checked?={ safetyCar == "no" }/>
 					<label for={ formType + "_safety_car_no" } class="ml-2 block text-sm text-gray-700">No</label>
 				</div>
 			</div>

@@ -600,7 +600,35 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 		}
 	}
 
-	templ.Handler(FormulaERacePage(cookieInfo, race, entrants, raceHasStarted, predictionScores)).ServeHTTP(w, r)
+	// Get the current user's prediction if authenticated
+	var userPrediction *datastore.GetFormulaERaceUserPredictionRow
+	if cookieInfo.IsAuthenticated {
+		userId, err := strconv.ParseInt(cookieInfo.UserID, 10, 64)
+		if err == nil {
+			prediction, err := app.Queries.GetFormulaERaceUserPrediction(ctx, datastore.GetFormulaERaceUserPredictionParams{
+				User:   userId,
+				RaceID: raceId,
+			})
+			if err == nil {
+				userPrediction = &prediction
+			} else if err != sql.ErrNoRows {
+				log.Error("Error fetching user prediction", err)
+			}
+		}
+	}
+
+	// Get the current race result (for admin)
+	var raceResult *datastore.GetFormulaERaceResultRow
+	if cookieInfo.IsAdmin {
+		result, err := app.Queries.GetFormulaERaceResult(ctx, raceId)
+		if err == nil {
+			raceResult = &result
+		} else if err != sql.ErrNoRows {
+			log.Error("Error fetching race result", err)
+		}
+	}
+
+	templ.Handler(FormulaERacePage(cookieInfo, race, entrants, raceHasStarted, predictionScores, userPrediction, raceResult)).ServeHTTP(w, r)
 }
 
 // FormulaEPredictionRequest represents the form data for Formula E predictions/results
