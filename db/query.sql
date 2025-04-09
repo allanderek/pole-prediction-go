@@ -407,7 +407,7 @@ with
     ( select entrants.id, drivers.name
       from entrants
       inner join drivers on entrants.driver = drivers.id
-      where entrants.race = @race_Id
+      where entrants.race = @race_id
     )
     select 
         users.username, 

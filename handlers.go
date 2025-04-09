@@ -584,10 +584,7 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 	// Get prediction scores if race has started
 	var predictionScores []datastore.GetFormulaERaceScoresRow
 	if raceHasStarted {
-		predictionScores, err = app.Queries.GetFormulaERaceScores(ctx, datastore.GetFormulaERaceScoresParams{
-				RaceID: raceId,
-				RaceId: raceId,
-			})
+		predictionScores, err = app.Queries.GetFormulaERaceScores(ctx, raceId)
 		if err != nil {
 			log.Error("Could not retrieve prediction scores", err)
 			// Don't return an error, just proceed with empty scores
