@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastore.GetFormulaERacesRow) {
+templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastore.GetFormulaERacesRow, leaderboard []datastore.GetFormulaELeaderboardRow) {
 	@Page(
 		"Formula E "+season,
 		"Races in the Formula E "+season+" season",
@@ -14,6 +14,43 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 	) {
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Main Content - Leaderboard -->
+				<div class="col-span-1 lg:col-span-2">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+						<h2 class="text-xl font-bold text-gray-900 mb-4">Formula E { season } Season Leaderboard</h2>
+						if len(leaderboard) > 0 {
+							<div class="overflow-x-auto">
+								<table class="min-w-full bg-white">
+									<thead class="bg-gray-50">
+										<tr class="border-b border-gray-200">
+											<th class="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+											<th class="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+											<th class="py-2 px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
+											<th class="py-2 px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Race Wins</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-200">
+										for i, entry := range leaderboard {
+											<tr class="hover:bg-gray-50 transition-colors duration-150">
+												<td class="py-3 px-4 whitespace-nowrap text-sm font-medium text-gray-900">{ strconv.Itoa(i + 1) }</td>
+												<td class="py-3 px-4 whitespace-nowrap text-sm text-gray-900">{ entry.User }</td>
+												<td class="py-3 px-4 whitespace-nowrap text-sm text-gray-900 text-center font-semibold">
+													{ strconv.FormatInt(entry.TotalScore, 10) }
+												</td>
+												<td class="py-3 px-4 whitespace-nowrap text-sm text-gray-900 text-center">
+													{ strconv.FormatInt(entry.RaceWins, 10) }
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						} else {
+							<p class="text-gray-500 italic">No leaderboard data available yet for this season.</p>
+						}
+					</div>
+				</div>
+				
 				<!-- Season Events Sidebar -->
 				<div class="col-span-1">
 					<div class="bg-white shadow-md rounded-lg p-6 mb-6">

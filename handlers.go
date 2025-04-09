@@ -543,8 +543,15 @@ func (h *CookieAuthHandler) FormulaESeasonHandler(w http.ResponseWriter, r *http
 		events = []datastore.GetFormulaERacesRow{}
 	}
 
-	templ.Handler(FormulaESeasonPage(cookieInfo, season, events)).ServeHTTP(w, r)
+	// Get the season leaderboard
+	leaderboard, err := app.Queries.GetFormulaELeaderboard(ctx, season)
+	if err != nil {
+		log.Error("Could not retrieve leaderboard for season", err)
+		// Don't return an error here, just continue with empty leaderboard
+		leaderboard = []datastore.GetFormulaELeaderboardRow{}
+	}
 
+	templ.Handler(FormulaESeasonPage(cookieInfo, season, events, leaderboard)).ServeHTTP(w, r)
 }
 func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
