@@ -50,7 +50,6 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 						}
 					</div>
 				</div>
-				
 				<!-- Season Events Sidebar -->
 				<div class="col-span-1">
 					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -118,7 +117,7 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
 								</svg>
-								@FormatLondonDate(race.Date)
+								@FormatLondonTime(race.Date)
 							</span>
 						</div>
 						<h2 class="text-xl font-semibold text-gray-800 mb-3 mt-6">Race Details</h2>
@@ -149,7 +148,6 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 							<p class="text-gray-500 italic">No entrants available for this race yet.</p>
 						}
 					</div>
-
 					<!-- Prediction Results Section (shown after race has started) -->
 					if raceHasStarted && len(scores) > 0 {
 						<div class="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -203,7 +201,6 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 							<p class="text-gray-500 italic">No prediction results available yet.</p>
 						</div>
 					}
-
 					<!-- Prediction Forms Section -->
 					if cookieInfo.IsAuthenticated {
 						<div id="predictionForms" data-start-time={ race.Date } class="mb-6">
@@ -211,12 +208,12 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 							<div id="predictionFormContainer" class="bg-blue-50 border border-blue-200 shadow-md rounded-lg p-6 mb-6">
 								<h2 class="text-xl font-semibold text-blue-800 mb-4">Your Predictions</h2>
 								<p class="text-sm text-blue-600 mb-4">Make your predictions before the race starts. Predictions cannot be changed after the race begins.</p>
-								<form id="predictionForm" action="/formulae/prediction/save" method="post" class="space-y-4">
-									<input type="hidden" name="race_id" value={ strconv.FormatInt(race.ID, 10) }/>
-									<input type="hidden" name="form_type" value="prediction"/>
+								<form id="predictionForm" class="space-y-4">
+									<input type="hidden" id="prediction_race" name="race" value={ strconv.FormatInt(race.ID, 10) }/>
+									<input type="hidden" id="prediction_type" name="type" value="prediction"/>
 									@FormulaEPredictionFields(entrants, "prediction")
 									<div class="pt-4">
-										<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+										<button type="button" id="savePredictionButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
 											Save Predictions
 										</button>
 									</div>
@@ -227,12 +224,12 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 								<div id="resultFormContainer" class="bg-red-50 border border-red-200 shadow-md rounded-lg p-6 hidden">
 									<h2 class="text-xl font-semibold text-red-800 mb-4">Race Results</h2>
 									<p class="text-sm text-red-600 mb-4">Enter the official race results. This data will be used to calculate user scores.</p>
-									<form id="resultForm" action="/formulae/prediction/save" method="post" class="space-y-4">
-										<input type="hidden" name="race_id" value={ strconv.FormatInt(race.ID, 10) }/>
-										<input type="hidden" name="form_type" value="result"/>
+									<form id="resultForm" class="space-y-4">
+										<input type="hidden" id="result_race" name="race" value={ strconv.FormatInt(race.ID, 10) }/>
+										<input type="hidden" id="result_type" name="type" value="result"/>
 										@FormulaEPredictionFields(entrants, "result")
 										<div class="pt-4">
-											<button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+											<button type="button" id="saveResultButton" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
 												Save Results
 											</button>
 										</div>
@@ -240,13 +237,28 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 								</div>
 							}
 						</div>
-						<!-- JavaScript to toggle between forms based on race start time -->
+						<!-- JavaScript to toggle between forms based on race start time and handle form submission -->
 						<script>
 							document.addEventListener('DOMContentLoaded', function() {
 								const predictionFormsContainer = document.getElementById('predictionForms');
 								const raceStartTime = new Date(predictionFormsContainer.getAttribute('data-start-time'));
 								const predictionFormContainer = document.getElementById('predictionFormContainer');
 								const resultFormContainer = document.getElementById('resultFormContainer');
+								
+								// Setup form submission handlers
+								const savePredictionButton = document.getElementById('savePredictionButton');
+								if (savePredictionButton) {
+									savePredictionButton.addEventListener('click', function() {
+										submitFormulaEForm('predictionForm', 'prediction');
+									});
+								}
+								
+								const saveResultButton = document.getElementById('saveResultButton');
+								if (saveResultButton) {
+									saveResultButton.addEventListener('click', function() {
+										submitFormulaEForm('resultForm', 'result');
+									});
+								}
 								
 								function updateFormDisplay() {
 									const now = new Date();
@@ -281,6 +293,54 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 									}
 								}
 								
+								// Form submission handler
+								function submitFormulaEForm(formId, formType) {
+									const form = document.getElementById(formId);
+									if (!form) return;
+									
+									// Create form data object
+									const formData = new FormData(form);
+									
+									// Convert FormData to a plain object for JSON serialization
+									const formObject = {};
+									formData.forEach((value, key) => {
+										// Convert string numbers to integers
+										if (['race', 'pole', 'fam', 'fl', 'hgc', 'first', 'second', 'third', 'fdnf'].includes(key) ) {
+											formObject[key] = value === '' ? 0 : parseInt(value, 10);
+										} else if (key === 'safety_car') {
+											formObject[key] = value === 'yes';
+										} else {
+											formObject[key] = value;
+										}
+									});
+									
+									// Send AJAX request
+									fetch('/formulae/prediction/save', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json',
+										},
+										body: JSON.stringify(formObject)
+									})
+									.then(response => {
+										if (!response.ok) {
+											throw new Error('Network response was not ok');
+										}
+										return response.json();
+									})
+									.then(data => {
+										if (data.success) {
+											alert(data.message || 'Successfully saved!');
+										} else {
+											alert('Error: ' + (data.message || 'Failed to save.'));
+										}
+									})
+									.catch(error => {
+										console.error('Error saving:', error);
+										alert('Failed to save. Please try again.');
+									});
+								}
+								
 								// Initial check
 								updateFormDisplay();
 							});
@@ -301,11 +361,10 @@ templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow,
 								<div>
 									<p class="font-medium">Race Start</p>
 									<p class="text-sm text-gray-500">
-										@FormatLondonDate(race.Date)
+										@FormatLondonTime(race.Date)
 									</p>
 								</div>
 							</div>
-							
 							<!-- Race Status -->
 							<div class="mt-4 pt-4 border-t border-gray-200">
 								<div class="flex items-center">

@@ -477,3 +477,20 @@ with
     order by sum(total) desc, sum(race_wins) desc
 ;
 
+-- name: UpsertFormulaEPrediction :exec
+insert 
+    into predictions 
+    (user, race, pole, fam, fl, hgc, first, second, third, fdnf, safety_car) values 
+    (@user, @race, @pole, @fam, @fl, @hgc, @first, @second, @third, @fdnf, @safety_car)
+on conflict(user,race)
+do update set pole = excluded.pole, fam=excluded.fam, fl=excluded.fl, hgc=excluded.hgc, first=excluded.first, second=excluded.second, third = excluded.third, fdnf=excluded.fdnf, safety_car=excluded.safety_car
+    ;
+
+-- name: UpsertFormulaEResult :exec
+insert 
+    into results 
+    (race, pole, fam, fl, hgc, first, second, third, fdnf, safety_car) values 
+    (@race, @pole, @fam, @fl, @hgc, @first, @second, @third, @fdnf, @safety_car)
+  on conflict(race)
+  do update set pole = excluded.pole, fam=excluded.fam, fl=excluded.fl, hgc=excluded.hgc, first=excluded.first, second=excluded.second, third = excluded.third, fdnf=excluded.fdnf, safety_car=excluded.safety_car
+    ;

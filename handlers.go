@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"sort"
@@ -600,4 +601,247 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 	}
 
 	templ.Handler(FormulaERacePage(cookieInfo, race, entrants, raceHasStarted, predictionScores)).ServeHTTP(w, r)
+}
+
+// FormulaEPredictionRequest represents the form data for Formula E predictions/results
+type FormulaEPredictionRequest struct {
+	Race      int64  `json:"race"`
+	Pole      int64  `json:"pole"`
+	Fam       int64  `json:"fam"`
+	Fl        int64  `json:"fl"`
+	Hgc       int64  `json:"hgc"`
+	First     int64  `json:"first"`
+	Second    int64  `json:"second"`
+	Third     int64  `json:"third"`
+	Fdnf      int64  `json:"fdnf"`
+	SafetyCar bool   `json:"safety_car"`
+	Type      string `json:"type"` // "prediction" or "result"
+}
+
+// SaveFormulaEPredictionHandler handles saving predictions or results for Formula E races
+func (h *CookieAuthHandler) SaveFormulaEPredictionHandler(w http.ResponseWriter, r *http.Request) {
+	// Only accept POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cookieInfo := h.verifyCookie(r)
+	if !cookieInfo.IsAuthenticated {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "You must be logged in to save predictions",
+		}, http.StatusUnauthorized)
+		return
+	}
+
+	// Variables to store the prediction/result data
+	var raceID int64
+	var predictionType string
+	var pole, fam, fl, hgc, first, second, third, fdnf int64
+	var safetyCar string
+
+	// Check if content type is JSON
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "application/json" {
+		// Parse JSON request
+		var req FormulaEPredictionRequest
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&req); err != nil {
+			sendJSONResponse(w, PredictionResponse{
+				Success: false,
+				Message: "Invalid JSON format",
+			}, http.StatusBadRequest)
+			return
+		}
+
+		raceID = req.Race
+		predictionType = req.Type
+		pole = req.Pole
+		fam = req.Fam
+		fl = req.Fl
+		hgc = req.Hgc
+		first = req.First
+		second = req.Second
+		third = req.Third
+		fdnf = req.Fdnf
+
+		// Convert boolean to string for database
+		if req.SafetyCar {
+			safetyCar = "yes"
+		} else {
+			safetyCar = "no"
+		}
+	} else {
+		// Parse form data
+		err := r.ParseForm()
+		if err != nil {
+			sendJSONResponse(w, PredictionResponse{
+				Success: false,
+				Message: "Invalid form data",
+			}, http.StatusBadRequest)
+			return
+		}
+
+		// Extract values from the form
+		raceID, err = strconv.ParseInt(r.FormValue("race_id"), 10, 64)
+		if err != nil || raceID == 0 {
+			// Try alternate form field name (from JavaScript)
+			raceID, err = strconv.ParseInt(r.FormValue("race"), 10, 64)
+			if err != nil || raceID == 0 {
+				sendJSONResponse(w, PredictionResponse{
+					Success: false,
+					Message: "Invalid race ID",
+				}, http.StatusBadRequest)
+				return
+			}
+		}
+
+		// Check for both possible field names
+		predictionType = r.FormValue("form_type")
+		if predictionType == "" {
+			predictionType = r.FormValue("type")
+		}
+
+		if r.FormValue("pole") != "" {
+			pole, _ = strconv.ParseInt(r.FormValue("pole"), 10, 64)
+		}
+		if r.FormValue("fam") != "" {
+			fam, _ = strconv.ParseInt(r.FormValue("fam"), 10, 64)
+		}
+		if r.FormValue("fl") != "" {
+			fl, _ = strconv.ParseInt(r.FormValue("fl"), 10, 64)
+		}
+		if r.FormValue("hgc") != "" {
+			hgc, _ = strconv.ParseInt(r.FormValue("hgc"), 10, 64)
+		}
+		if r.FormValue("first") != "" {
+			first, _ = strconv.ParseInt(r.FormValue("first"), 10, 64)
+		}
+		if r.FormValue("second") != "" {
+			second, _ = strconv.ParseInt(r.FormValue("second"), 10, 64)
+		}
+		if r.FormValue("third") != "" {
+			third, _ = strconv.ParseInt(r.FormValue("third"), 10, 64)
+		}
+		if r.FormValue("fdnf") != "" {
+			fdnf, _ = strconv.ParseInt(r.FormValue("fdnf"), 10, 64)
+		}
+		safetyCar = r.FormValue("safety_car")
+	}
+
+	// Validate required data
+	if raceID == 0 {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Race ID is required",
+		}, http.StatusBadRequest)
+		return
+	}
+
+	// Get race details to check the deadline for predictions
+	race, err := app.Queries.GetFormulaERace(r.Context(), raceID)
+	if err != nil {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Race not found",
+		}, http.StatusNotFound)
+		return
+	}
+
+	// Determine whether this is a prediction or result
+	if predictionType != "prediction" && predictionType != "result" {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Invalid prediction type",
+		}, http.StatusBadRequest)
+		return
+	}
+
+	// For result submissions, check if user is admin
+	if predictionType == "result" && !cookieInfo.IsAdmin {
+		sendJSONResponse(w, PredictionResponse{
+			Success: false,
+			Message: "Admin privileges required to save results",
+		}, http.StatusForbidden)
+		return
+	}
+
+	// For predictions, check if race has started
+	if predictionType == "prediction" {
+		raceStartTime, err := time.Parse(time.RFC3339, race.Date)
+		if err == nil && time.Now().After(raceStartTime) {
+			sendJSONResponse(w, PredictionResponse{
+				Success: false,
+				Message: "Predictions cannot be submitted after the race has started",
+			}, http.StatusOK) // We give an 'OK' here so the component displays the message
+			return
+		}
+	}
+
+	// Save to the database
+	if predictionType == "prediction" {
+		// Get user ID
+		userID, err := strconv.ParseInt(cookieInfo.UserID, 10, 64)
+		if err != nil {
+			log.Error("Invalid UserID", err)
+			http.Error(w, "Invalid UserID", http.StatusInternalServerError)
+			return
+		}
+
+		// Insert or update prediction
+		err = app.Queries.UpsertFormulaEPrediction(r.Context(), datastore.UpsertFormulaEPredictionParams{
+			User:      userID,
+			Race:      raceID,
+			Pole:      pole,
+			Fam:       fam,
+			Fl:        fl,
+			Hgc:       hgc,
+			First:     first,
+			Second:    second,
+			Third:     third,
+			Fdnf:      fdnf,
+			SafetyCar: safetyCar,
+		})
+		if err != nil {
+			log.Error("Could not save prediction", err)
+			sendJSONResponse(w, PredictionResponse{
+				Success: false,
+				Message: "Failed to save prediction",
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		sendJSONResponse(w, PredictionResponse{
+			Success: true,
+			Message: "Prediction saved successfully",
+		}, http.StatusOK)
+	} else {
+		// This is a result submission
+		err = app.Queries.UpsertFormulaEResult(r.Context(), datastore.UpsertFormulaEResultParams{
+			Race:      raceID,
+			Pole:      pole,
+			Fam:       fam,
+			Fl:        fl,
+			Hgc:       hgc,
+			First:     first,
+			Second:    second,
+			Third:     third,
+			Fdnf:      fdnf,
+			SafetyCar: safetyCar,
+		})
+		if err != nil {
+			log.Error("Could not save result", err)
+			sendJSONResponse(w, PredictionResponse{
+				Success: false,
+				Message: "Failed to save result",
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		sendJSONResponse(w, PredictionResponse{
+			Success: true,
+			Message: "Result saved successfully",
+		}, http.StatusOK)
+	}
 }
