@@ -56,13 +56,271 @@ templ FormulaESeasonPage(cookieInfo CookieInfo, season string, events []datastor
 	}
 }
 
-templ FormulaERacePage(cookieInfo CookieInfo, raceId string, entrants []datastore.GetFormulaERaceEntrantsRow) {
+templ FormulaERacePage(cookieInfo CookieInfo, race datastore.GetFormulaERaceRow, entrants []datastore.GetFormulaERaceEntrantsRow) {
 	@Page(
-		"Formula E ",
-		"Formula E race",
-		templ.URL("/fe/race/"+raceId),
+		"Formula E "+race.Name,
+		"Formula E race - "+race.Name,
+		templ.URL("/formulae/race/"+strconv.FormatInt(race.ID, 10)),
 		cookieInfo,
 	) {
-		I don't yet have a page for a race.
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Main Content -->
+				<div class="col-span-1 lg:col-span-2">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+						<h1 class="text-2xl font-bold text-gray-900 mb-2">{ race.Name }</h1>
+						<div class="text-sm text-gray-500 mb-4">
+							<span class="inline-flex items-center mr-4">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+								</svg>
+								{ race.Circuit }, { race.Country }
+							</span>
+							<span class="inline-flex items-center">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+								@FormatLondonDate(race.Date)
+							</span>
+						</div>
+						<h2 class="text-xl font-semibold text-gray-800 mb-3 mt-6">Race Details</h2>
+						<p class="text-gray-600 mb-6">
+							Round { strconv.FormatInt(race.Round, 10) } of the Formula E { race.Season } season.
+						</p>
+						<h2 class="text-xl font-semibold text-gray-800 mb-3">Entrants</h2>
+						if len(entrants) > 0 {
+							<div class="overflow-x-auto">
+								<table class="min-w-full bg-white">
+									<thead class="bg-gray-50">
+										<tr>
+											<th class="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+											<th class="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-200">
+										for _, entrant := range entrants {
+											<tr class="hover:bg-gray-50">
+												<td class="py-3 px-3 whitespace-nowrap">{ entrant.Name }</td>
+												<td class="py-3 px-3 whitespace-nowrap">{ entrant.Shortname }</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						} else {
+							<p class="text-gray-500 italic">No entrants available for this race yet.</p>
+						}
+					</div>
+					<!-- Prediction Forms Section -->
+					if cookieInfo.IsAuthenticated {
+						<div id="predictionForms" data-start-time={ race.Date } class="mb-6">
+							<!-- Prediction Form (for logged-in users before race start) -->
+							<div id="predictionFormContainer" class="bg-blue-50 border border-blue-200 shadow-md rounded-lg p-6 mb-6">
+								<h2 class="text-xl font-semibold text-blue-800 mb-4">Your Predictions</h2>
+								<p class="text-sm text-blue-600 mb-4">Make your predictions before the race starts. Predictions cannot be changed after the race begins.</p>
+								<form id="predictionForm" action="/formulae/prediction/save" method="post" class="space-y-4">
+									<input type="hidden" name="race_id" value={ strconv.FormatInt(race.ID, 10) }/>
+									<input type="hidden" name="form_type" value="prediction"/>
+									@FormulaEPredictionFields(entrants, "prediction")
+									<div class="pt-4">
+										<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+											Save Predictions
+										</button>
+									</div>
+								</form>
+							</div>
+							<!-- Results Form (for admins after race start) -->
+							if cookieInfo.IsAdmin {
+								<div id="resultFormContainer" class="bg-red-50 border border-red-200 shadow-md rounded-lg p-6 hidden">
+									<h2 class="text-xl font-semibold text-red-800 mb-4">Race Results</h2>
+									<p class="text-sm text-red-600 mb-4">Enter the official race results. This data will be used to calculate user scores.</p>
+									<form id="resultForm" action="/formulae/prediction/save" method="post" class="space-y-4">
+										<input type="hidden" name="race_id" value={ strconv.FormatInt(race.ID, 10) }/>
+										<input type="hidden" name="form_type" value="result"/>
+										@FormulaEPredictionFields(entrants, "result")
+										<div class="pt-4">
+											<button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+												Save Results
+											</button>
+										</div>
+									</form>
+								</div>
+							}
+						</div>
+						<!-- JavaScript to toggle between forms based on race start time -->
+						<script>
+							document.addEventListener('DOMContentLoaded', function() {
+								const predictionFormsContainer = document.getElementById('predictionForms');
+								const raceStartTime = new Date(predictionFormsContainer.getAttribute('data-start-time'));
+								const predictionFormContainer = document.getElementById('predictionFormContainer');
+								const resultFormContainer = document.getElementById('resultFormContainer');
+								
+								function updateFormDisplay() {
+									const now = new Date();
+									
+									// Check if race has started
+									if (now >= raceStartTime) {
+										// Race has started - hide prediction form
+										if (predictionFormContainer) {
+											predictionFormContainer.classList.add('hidden');
+										}
+										
+										// Show results form (if admin)
+										if (resultFormContainer) {
+											resultFormContainer.classList.remove('hidden');
+										}
+									} else {
+										// Race hasn't started - show prediction form
+										if (predictionFormContainer) {
+											predictionFormContainer.classList.remove('hidden');
+										}
+										
+										// Hide results form
+										if (resultFormContainer) {
+											resultFormContainer.classList.add('hidden');
+										}
+										
+										// Calculate time until race starts for next check
+										const timeUntilRace = raceStartTime - now;
+										// Check again after race start (or every minute if that's too far in the future)
+										const checkAgainIn = Math.min(timeUntilRace, 60000);
+										setTimeout(updateFormDisplay, checkAgainIn);
+									}
+								}
+								
+								// Initial check
+								updateFormDisplay();
+							});
+						</script>
+					}
+				</div>
+				<!-- Sidebar -->
+				<div class="col-span-1">
+					<div class="bg-white shadow-md rounded-lg p-6 mb-6 sticky top-4">
+						<h2 class="text-xl font-bold text-gray-900 mb-4">Race Schedule</h2>
+						<div class="space-y-4">
+							<div class="flex items-center space-x-3">
+								<div class="bg-green-100 text-green-800 p-2 rounded">
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+									</svg>
+								</div>
+								<div>
+									<p class="font-medium">Race Start</p>
+									<p class="text-sm text-gray-500">
+										@FormatLondonDate(race.Date)
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	}
+}
+
+// FormulaEPredictionFields renders the common prediction/result fields for Formula E races
+templ FormulaEPredictionFields(entrants []datastore.GetFormulaERaceEntrantsRow, formType string) {
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+		<!-- Pole Position -->
+		<div>
+			<label for={ formType + "_pole" } class="block text-sm font-medium text-gray-700 mb-1">Pole Position</label>
+			<select id={ formType + "_pole" } name="pole" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- FAM (Fan Activation Mode) -->
+		<div>
+			<label for={ formType + "_fam" } class="block text-sm font-medium text-gray-700 mb-1">FAM Winner</label>
+			<select id={ formType + "_fam" } name="fam" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- Fastest Lap -->
+		<div>
+			<label for={ formType + "_fl" } class="block text-sm font-medium text-gray-700 mb-1">Fastest Lap</label>
+			<select id={ formType + "_fl" } name="fl" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- HGC (Highest Grid Climber) -->
+		<div>
+			<label for={ formType + "_hgc" } class="block text-sm font-medium text-gray-700 mb-1">Highest Grid Climber</label>
+			<select id={ formType + "_hgc" } name="hgc" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+	</div>
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+		<!-- First Place -->
+		<div>
+			<label for={ formType + "_first" } class="block text-sm font-medium text-gray-700 mb-1">1st Place</label>
+			<select id={ formType + "_first" } name="first" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- Second Place -->
+		<div>
+			<label for={ formType + "_second" } class="block text-sm font-medium text-gray-700 mb-1">2nd Place</label>
+			<select id={ formType + "_second" } name="second" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- Third Place -->
+		<div>
+			<label for={ formType + "_third" } class="block text-sm font-medium text-gray-700 mb-1">3rd Place</label>
+			<select id={ formType + "_third" } name="third" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+	</div>
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+		<!-- FDNF (First Driver Not to Finish) -->
+		<div>
+			<label for={ formType + "_fdnf" } class="block text-sm font-medium text-gray-700 mb-1">First Driver Not to Finish</label>
+			<select id={ formType + "_fdnf" } name="fdnf" class="w-full p-2 border border-gray-300 rounded-md focus:ring focus:ring-indigo-200">
+				<option value="">-- Select Driver --</option>
+				for _, entrant := range entrants {
+					<option value={ strconv.FormatInt(entrant.ID, 10) }>{ entrant.Name } ({ entrant.Shortname })</option>
+				}
+			</select>
+		</div>
+		<!-- Safety Car -->
+		<div>
+			<label for={ formType + "_safety_car" } class="block text-sm font-medium text-gray-700 mb-1">Safety Car?</label>
+			<div class="flex items-center space-x-4 mt-2">
+				<div class="flex items-center">
+					<input id={ formType + "_safety_car_yes" } name="safety_car" type="radio" value="yes" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
+					<label for={ formType + "_safety_car_yes" } class="ml-2 block text-sm text-gray-700">Yes</label>
+				</div>
+				<div class="flex items-center">
+					<input id={ formType + "_safety_car_no" } name="safety_car" type="radio" value="no" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
+					<label for={ formType + "_safety_car_no" } class="ml-2 block text-sm text-gray-700">No</label>
+				</div>
+			</div>
+		</div>
+	</div>
 }

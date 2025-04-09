@@ -394,3 +394,9 @@ inner join teams t on entrants.team = t.id
 where race = @race and entrants.participating = 1
 ;
 
+-- name: GetFormulaERace :one
+select id, round, name, country, circuit, date, season
+from races
+where id = @race_id
+;
+

@@ -558,7 +558,15 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Get Formula E races for the season for navigation
+	// Get the race information
+	race, err := app.Queries.GetFormulaERace(ctx, raceId)
+	if err != nil {
+		log.Error("Could not retrieve the race", err)
+		http.Error(w, "Race not found", http.StatusNotFound)
+		return
+	}
+
+	// Get Formula E race entrants
 	entrants, err := app.Queries.GetFormulaERaceEntrants(ctx, raceId)
 	if err != nil {
 		log.Error("Could not retrieve the entrants for the race", err)
@@ -566,5 +574,5 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	templ.Handler(FormulaERacePage(cookieInfo, raceIdString, entrants)).ServeHTTP(w, r)
+	templ.Handler(FormulaERacePage(cookieInfo, race, entrants)).ServeHTTP(w, r)
 }
