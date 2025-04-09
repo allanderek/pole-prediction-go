@@ -400,6 +400,18 @@ from races
 where id = @race_id
 ;
 
+-- name: GetFormulaERaceUserPrediction :one
+select 
+    pole, fam, fl, hgc, first, second, third, fdnf, safety_car 
+from predictions 
+where user = @user and race = @race_id
+;
+
+-- name: GetFormulaERaceResult :one
+select pole, fam, fl, hgc, first, second, third, fdnf, safety_car 
+from results 
+where race = @race_id
+;
 
 -- name: GetFormulaERaceScores :many
 with
