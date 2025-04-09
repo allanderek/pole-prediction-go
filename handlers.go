@@ -574,5 +574,26 @@ func (h *CookieAuthHandler) FormulaEEventHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	templ.Handler(FormulaERacePage(cookieInfo, race, entrants)).ServeHTTP(w, r)
+	// Check if race has started to determine if we should show predictions
+	raceHasStarted := false
+	raceStartTime, err := time.Parse(time.RFC3339, race.Date)
+	if err == nil && time.Now().After(raceStartTime) {
+		raceHasStarted = true
+	}
+
+	// Get prediction scores if race has started
+	var predictionScores []datastore.GetFormulaERaceScoresRow
+	if raceHasStarted {
+		predictionScores, err = app.Queries.GetFormulaERaceScores(ctx, datastore.GetFormulaERaceScoresParams{
+				RaceID: raceId,
+				RaceId: raceId,
+			})
+		if err != nil {
+			log.Error("Could not retrieve prediction scores", err)
+			// Don't return an error, just proceed with empty scores
+			predictionScores = []datastore.GetFormulaERaceScoresRow{}
+		}
+	}
+
+	templ.Handler(FormulaERacePage(cookieInfo, race, entrants, raceHasStarted, predictionScores)).ServeHTTP(w, r)
 }
